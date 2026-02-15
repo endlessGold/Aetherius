@@ -30,7 +30,8 @@
   - `Command.Event`: 사용자 및 API 명령.
 
 ### 2.3 환경 그리드 (Environment Grid)
-- **TypedArray 최적화**: 대규모 환경 데이터를 처리하기 위해 `Float32Array`를 사용하여 메모리 효율성과 연산 속도를 극대화.
+- **대규모 스케일 (Massive Scale)**: **10억 개(1 Billion)** 이상의 환경 파라미터를 실시간으로 시뮬레이션하는 것을 목표로 설계됨.
+- **TypedArray 최적화**: `Float32Array`와 `SharedArrayBuffer`를 사용하여 메모리 효율성과 연산 속도를 극대화.
 - **물리 엔진**: 확산(Diffusion) 및 이류(Advection) 알고리즘을 통해 열, 수분, 영양분의 자연스러운 이동을 시뮬레이션.
 
 ### 2.4 생물학적 모델 (Biological Model)
