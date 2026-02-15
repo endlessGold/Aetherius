@@ -12,7 +12,7 @@ export class ReactionSystem extends BaseSystem {
         // 비가 많이 오면 홍수 이벤트 발생 가능성 체크
         const { layer, delta } = event.payload;
         // 여기에 복잡한 연쇄 반응 로직 추가
-        // if (delta > 0.5) this.publish(new FloodEvent(...));
+        // if (delta > 0.5) this.publish(new Environment.Flood(...));
     }
     handleEntitySpawn(event) {
         const { entityType, position } = event.payload;
