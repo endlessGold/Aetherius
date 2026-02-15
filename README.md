@@ -92,6 +92,7 @@ npm start -- --mode server
 ## 6. 과학적 개발 로드맵 (Scientific Development Roadmap)
 
 상업적 이익이 아닌, **시뮬레이션의 정밀도(Accuracy)**, **재현성(Reproducibility)**, **창발성(Emergence)**을 목표로 하는 순수 연구 개발 계획입니다.
+자세한 3개년 연구 계획은 [ROADMAP.md](ROADMAP.md)를 참조하십시오.
 
 ### **Phase 1: 기초 물리 및 환경 역학 (1~3개월)**
 *결정론적 환경 시뮬레이션의 수학적 모델 확립*
