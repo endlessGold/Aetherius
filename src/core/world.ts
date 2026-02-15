@@ -5,6 +5,8 @@ import { EventCategory } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
 import { GoalGASystem } from './systems/goalGASystem.js';
+import { createPersistenceFromEnv, Persistence } from '../data/persistence.js';
+import { NodeSnapshot, TickSnapshot } from '../data/noSqlAdapter.js';
 
 export class World {
   id: string;
@@ -12,14 +14,16 @@ export class World {
   eventLoop: EventLoop = new EventLoop(); // Legacy, to be migrated
   eventBus: EventBus = new EventBus(); // New Advanced Event System
   tickCount: number = 0;
+  persistence: Persistence;
   
   // High-Resolution Simulation Components
   environment: EnvironmentGrid;
   natureSystem: NatureSystem;
   goalGASystem: GoalGASystem;
 
-  constructor(id: string) {
+  constructor(id: string, options?: { persistence?: Persistence }) {
     this.id = id;
+    this.persistence = options?.persistence ?? createPersistenceFromEnv();
     
     // Create a massive world grid (7000x7000 default)
     // 21 layers * 49M cells ≈ 1 Billion parameters
@@ -74,5 +78,20 @@ export class World {
     this.nodes.forEach((node) => {
       node.handleEvent(tickEvent);
     });
+
+    const snapshot = this.buildSnapshot(Date.now());
+    await this.persistence.saveTickSnapshot(snapshot);
+  }
+
+  private buildSnapshot(timestamp: number): TickSnapshot {
+    const nodes: NodeSnapshot[] = [];
+    for (const node of this.nodes.values()) {
+      const components: Record<string, any> = {};
+      node.components.forEach((comp, key) => {
+        components[key] = comp.state;
+      });
+      nodes.push({ id: node.id, type: node.type, components });
+    }
+    return { worldId: this.id, tick: this.tickCount, timestamp, nodes };
   }
 }
