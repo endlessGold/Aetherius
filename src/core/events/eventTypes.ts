@@ -7,7 +7,7 @@ export interface BaseEvent {
     priority: number; // 0: Low, 1: Normal, 2: High, 3: Critical
 }
 
-// 이벤트 카테고리 정의 (분기 처리를 위함)
+// 이벤트 카테고리 정의
 export enum EventCategory {
     System = 'System',
     Physics = 'Physics',
@@ -37,52 +37,58 @@ export class SimEvent<T = any> implements BaseEvent {
     }
 }
 
-// --- 중간 계층 이벤트 (카테고리별 분류) ---
+// --- 네임스페이스 기반 이벤트 구조 ---
 
-// 환경/물리 관련 이벤트 (Physics)
-export class EnvEvent<T = any> extends SimEvent<T> {
-    constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
-        super(type, EventCategory.Physics, payload, sourceId, priority);
+// 환경/물리 (Environment/Physics)
+export namespace Env {
+    export class Event<T = any> extends SimEvent<T> {
+        constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
+            super(type, EventCategory.Physics, payload, sourceId, priority);
+        }
+    }
+
+    export class WeatherChange extends Event<{ layer: number; delta: number; x: number; y: number }> {
+        constructor(layer: number, delta: number, x: number, y: number) {
+            super('WeatherChange', { layer, delta, x, y });
+        }
     }
 }
 
-// 생물 관련 이벤트 (Biological)
-export class BioEvent<T = any> extends SimEvent<T> {
-    constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
-        super(type, EventCategory.Biological, payload, sourceId, priority);
+// 생물 (Biological)
+export namespace Bio {
+    export class Event<T = any> extends SimEvent<T> {
+        constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
+            super(type, EventCategory.Biological, payload, sourceId, priority);
+        }
+    }
+
+    export class EntitySpawn extends Event<{ entityType: string; position: { x: number, y: number } }> {
+        constructor(entityType: string, x: number, y: number, sourceId?: string) {
+            super('EntitySpawn', { entityType, position: { x, y } }, sourceId);
+        }
     }
 }
 
-// 시스템 관련 이벤트 (System)
-export class SysEvent<T = any> extends SimEvent<T> {
-    constructor(type: string, payload: T, sourceId?: string, priority: number = 2) {
-        super(type, EventCategory.System, payload, sourceId, priority);
+// 시스템 (System)
+export namespace Sys {
+    export class Event<T = any> extends SimEvent<T> {
+        constructor(type: string, payload: T, sourceId?: string, priority: number = 2) {
+            super(type, EventCategory.System, payload, sourceId, priority);
+        }
+    }
+
+    export class Tick extends Event<{ tickCount: number; deltaTime: number }> {
+        constructor(tickCount: number, deltaTime: number) {
+            super('Tick', { tickCount, deltaTime });
+        }
     }
 }
 
-// 명령 관련 이벤트 (Command)
-export class CmdEvent<T = any> extends SimEvent<T> {
-    constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
-        super(type, EventCategory.Command, payload, sourceId, priority);
-    }
-}
-
-// --- 구체적인 이벤트 타입들 ---
-
-export class TickEvent extends SysEvent<{ tickCount: number; deltaTime: number }> {
-    constructor(tickCount: number, deltaTime: number) {
-        super('Tick', { tickCount, deltaTime });
-    }
-}
-
-export class EntitySpawnEvent extends BioEvent<{ entityType: string; position: { x: number, y: number } }> {
-    constructor(entityType: string, x: number, y: number, sourceId?: string) {
-        super('EntitySpawn', { entityType, position: { x, y } }, sourceId);
-    }
-}
-
-export class WeatherChangeEvent extends EnvEvent<{ layer: number; delta: number; x: number; y: number }> {
-    constructor(layer: number, delta: number, x: number, y: number) {
-        super('WeatherChange', { layer, delta, x, y });
+// 명령 (Command)
+export namespace Cmd {
+    export class Event<T = any> extends SimEvent<T> {
+        constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
+            super(type, EventCategory.Command, payload, sourceId, priority);
+        }
     }
 }
