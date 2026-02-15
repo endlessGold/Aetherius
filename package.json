@@ -1,9 +1,13 @@
 {
   "name": "aetherius",
   "version": "1.0.0",
-  "description": "",
+  "description": "High-resolution biological simulation engine",
   "main": "index.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/endlessGold/Aetherius.git"
+  },
   "scripts": {
     "start": "node --loader ts-node/esm src/main.ts",
     "start:server": "node --loader ts-node/esm src/main.ts --mode=server",
