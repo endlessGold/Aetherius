@@ -84,7 +84,7 @@ npm start -- --mode server
 
 1.  **No Abbreviations**: `Sim` 대신 `Simulation`, `Env` 대신 `Environment` 사용. 명확성이 길이보다 우선함.
 2.  **Source of Truth**: GitHub 리포지토리를 유일한 진실의 원천(Single Source of Truth)으로 관리.
-3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈(`Aetherius-Secrets`)로 분리하여 관리.
+3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈([Aetherius-Secrets](https://github.com/endlessGold/Aetherius-Secrets))로 분리하여 관리.
 4.  **Automation**: `auto-sync.ps1` 스크립트를 통해 공용 환경에서도 안전하게 작업 동기화.
 
 ---
