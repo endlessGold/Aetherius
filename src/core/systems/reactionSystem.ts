@@ -1,5 +1,5 @@
 import { BaseSystem } from './baseSystem.js';
-import { SimulationEvent, EventCategory, Environment } from '../events/eventTypes.js';
+import { Simulation, EventCategory, Environment } from '../events/eventTypes.js';
 
 // 반응형 시스템 (Reaction System)
 // 특정 이벤트가 발생했을 때 연쇄 반응을 일으키는 로직을 담당
@@ -12,7 +12,7 @@ export class ReactionSystem extends BaseSystem {
         this.subscribe('EntitySpawn', this.handleEntitySpawn);
     }
 
-    private handleWeatherChange(event: SimulationEvent<any>) {
+    private handleWeatherChange(event: Simulation.Event<any>) {
         // 비가 많이 오면 홍수 이벤트 발생 가능성 체크
         const { layer, delta } = event.payload;
         
@@ -20,7 +20,7 @@ export class ReactionSystem extends BaseSystem {
         // if (delta > 0.5) this.publish(new Environment.Flood(...));
     }
 
-    private handleEntitySpawn(event: SimulationEvent<any>) {
+    private handleEntitySpawn(event: Simulation.Event<any>) {
         const { entityType, position } = event.payload;
         // 새로운 생명체가 태어나면 주변 환경에 영향을 줌 (예: 영양분 감소)
         

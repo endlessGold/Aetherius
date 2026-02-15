@@ -16,24 +16,26 @@ export enum EventCategory {
     Command = 'Command'
 }
 
-// 추상화된 최상위 이벤트 정의
-export class SimulationEvent<T = any> implements BaseEvent {
-    id: string;
-    type: string;
-    category: EventCategory;
-    timestamp: number;
-    payload: T;
-    sourceId?: string;
-    priority: number;
+// 추상화된 최상위 이벤트 정의 (Simulation Namespace)
+export namespace Simulation {
+    export class Event<T = any> implements BaseEvent {
+        id: string;
+        type: string;
+        category: EventCategory;
+        timestamp: number;
+        payload: T;
+        sourceId?: string;
+        priority: number;
 
-    constructor(type: string, category: EventCategory, payload: T, sourceId?: string, priority: number = 1) {
-        this.id = Math.random().toString(36).substr(2, 9);
-        this.type = type;
-        this.category = category;
-        this.payload = payload;
-        this.timestamp = Date.now();
-        this.sourceId = sourceId;
-        this.priority = priority;
+        constructor(type: string, category: EventCategory, payload: T, sourceId?: string, priority: number = 1) {
+            this.id = Math.random().toString(36).substr(2, 9);
+            this.type = type;
+            this.category = category;
+            this.payload = payload;
+            this.timestamp = Date.now();
+            this.sourceId = sourceId;
+            this.priority = priority;
+        }
     }
 }
 
@@ -41,7 +43,7 @@ export class SimulationEvent<T = any> implements BaseEvent {
 
 // 환경/물리 (Environment/Physics)
 export namespace Environment {
-    export class Event<T = any> extends SimulationEvent<T> {
+    export class Event<T = any> extends Simulation.Event<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Physics, payload, sourceId, priority);
         }
@@ -56,7 +58,7 @@ export namespace Environment {
 
 // 생물 (Biological)
 export namespace Biological {
-    export class Event<T = any> extends SimulationEvent<T> {
+    export class Event<T = any> extends Simulation.Event<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Biological, payload, sourceId, priority);
         }
@@ -71,7 +73,7 @@ export namespace Biological {
 
 // 시스템 (System)
 export namespace System {
-    export class Event<T = any> extends SimulationEvent<T> {
+    export class Event<T = any> extends Simulation.Event<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 2) {
             super(type, EventCategory.System, payload, sourceId, priority);
         }
@@ -86,7 +88,7 @@ export namespace System {
 
 // 명령 (Command)
 export namespace Command {
-    export class Event<T = any> extends SimulationEvent<T> {
+    export class Event<T = any> extends Simulation.Event<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Command, payload, sourceId, priority);
         }

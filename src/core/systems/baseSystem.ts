@@ -1,5 +1,5 @@
 import { IEventBus, EventHandler } from '../events/eventBus.js';
-import { SimulationEvent, EventCategory } from '../events/eventTypes.js';
+import { Simulation, EventCategory } from '../events/eventTypes.js';
 
 // 모든 시스템(System)의 기본 추상 클래스
 export abstract class BaseSystem {
@@ -16,7 +16,7 @@ export abstract class BaseSystem {
     protected abstract registerHandlers(): void;
 
     // 편의 메서드: 이벤트 발행
-    protected publish(event: SimulationEvent): void {
+    protected publish(event: Simulation.Event): void {
         this.eventBus.publish(event);
     }
 
