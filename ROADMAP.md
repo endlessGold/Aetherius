@@ -41,7 +41,7 @@
 ---
 
 ## **2년 차: 진화와 생태학 (생물 단계)**
-*자가 복제 에이전트와 진화적 압력 도입.*
+*자기 복제 에이전트와 진화적 압력 도입.*
 
 ### **3단계: 유전 알고리즘 및 자연 선택 (1~2분기)**
 - **목표**: 유전과 변이를 통한 진화 활성화.
@@ -114,8 +114,6 @@
 3.  **협업 플랫폼**: 연구자들이 자신의 생물학적 모델(예: 맞춤형 대사 경로)을 플러그인할 수 있는 API 제공.
 
 ---
----
-
 # Aetherius Technical Roadmap: In Silico Biology
 
 This document outlines the long-term development plan for the Aetherius simulation engine. The primary focus of this phase is the accurate digital reproduction of natural phenomena and the implementation of emergent behavior in complex systems. Commercial viability and application strategies will be determined once the core technological foundation is established.

@@ -5,10 +5,20 @@
 
 ---
 
+## 0. 한눈에 보는 설계 (Quick Design Overview)
+
+- **목표**: 외부 입력이 같으면 결과도 같은 결정론적 시뮬레이션을 유지하면서, 물리/생물 로직을 확장 가능하게 쌓습니다.
+- **핵심 루프**: `World.tick()`이 시간의 단위이며, 환경 업데이트 → 개체(노드/컴포넌트) 업데이트 → 스냅샷 저장 흐름으로 진행됩니다.
+- **이벤트 중심**: CLI/REST 요청은 즉시 상태를 바꾸지 않고, 이벤트/요청 큐에 적재된 뒤 Tick 경계에서 처리됩니다.
+- **구성 방식**: 노드(Node)에 컴포넌트(Component)를 붙여 상태/반응을 분리하고, 시스템은 이벤트를 구독하는 리액터 형태로 동작합니다.
+- **실행 모드**: 같은 코드베이스로 CLI 모드와 웹 서버(Express REST API) 모드를 함께 지원합니다.
+
+---
+
 ## 1. 프로젝트 비전 (Vision)
 
 - **과학적 정밀함 (Scientific Accuracy)**: 20개 이상의 환경 변수와 10억 개 이상의 파라미터(Environment Grid)를 처리할 수 있는 구조.
-- **확장성 (Scalability)**: CLI(로컬 테스트)와 Web Server(원격 API) 모드를 동시에 지원하는 이중 아키텍처.
+- **확장성 (Scalability)**: CLI(로컬 테스트)와 웹 서버(원격 API) 모드를 동시에 지원하는 이중 아키텍처.
 - **결정론적 시뮬레이션 (Deterministic Simulation)**: 모든 상태 변경은 중앙 이벤트 루프(Event Loop)와 Tick 시스템을 통해서만 이루어짐.
 
 ---
@@ -18,7 +28,7 @@
 ### 2.1 이중 실행 모드 (Dual Execution Mode)
 단일 코드베이스(`main.ts`)에서 실행 인자에 따라 두 가지 모드로 작동합니다.
 - **CLI 모드 (`--mode cli`)**: 개발자 및 디버깅용 대화형 터미널.
-- **Server 모드 (`--mode server`)**: Express 기반 REST API 서버. 외부 요청을 비동기 이벤트 큐(Event Queue)에 등록하여 처리.
+- **서버 모드 (`--mode server`)**: Express 기반 REST API 서버. 외부 요청을 비동기 이벤트 큐(Event Queue)에 등록하여 처리.
 
 ### 2.2 이벤트 기반 시스템 (Event-Driven System)
 모든 상호작용은 `EventBus`를 통해 발행(Publish) 및 구독(Subscribe) 됩니다.
@@ -76,7 +86,7 @@ npm start -- --mode server
 - **상태 확인**: `GET /status`
 - **명령 전송**: `POST /command`
   ```json
-  { "command": "spawn plant 10 10" }
+  { "command": "spawn_entity plant Rose" }
   ```
 
 ---
@@ -85,7 +95,7 @@ npm start -- --mode server
 
 1.  **No Abbreviations**: `Sim` 대신 `Simulation`, `Env` 대신 `Environment` 사용. 명확성이 길이보다 우선함.
 2.  **Source of Truth**: GitHub 리포지토리를 유일한 진실의 원천(Single Source of Truth)으로 관리.
-3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈([Aetherius-Secrets](https://github.com/endlessGold/Aetherius-Secrets))로 분리하여 관리.
+3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈([Aetherius-Secrets](https://github.com/EndlessGames/Aetherius-Secrets))로 분리하여 관리.
 4.  **Automation**: `auto-sync.ps1` 스크립트를 통해 공용 환경에서도 안전하게 작업 동기화.
 5.  **Code Rules**: 구현/용어 기준은 [CODE_RULES.md](CODE_RULES.md)를 따른다. (이 프로젝트의 “ECS”는 전통적 일괄처리 ECS가 아니라 이벤트 기반 하이브리드 의미)
 
@@ -146,7 +156,7 @@ npm start -- --mode server
 - **실시간 데이터 시각화**: 시뮬레이션 데이터의 실시간 히트맵, 그래프 렌더링 및 로깅 시스템 구축.
 
 **검증 지표**
-- 시뮬레이션 결과의 통계적 유의성 검증 (P-value).
+- 시뮬레이션 결과의 통계적 유의성 검증 (p-value).
 - 논문 작성을 위한 고해상도 데이터셋 추출 파이프라인 완성.
 
 ---
