@@ -4,6 +4,7 @@ import { WorldManager } from '../server/worldManager.js';
 import { WorldSession } from '../server/worldSession.js';
 import { AsyncCommandHandler } from '../server/asyncCommandHandler.js';
 import { createRouter } from '../server/router.js';
+import path from 'path';
 
 export class Server {
   private app: express.Application;
@@ -30,19 +31,23 @@ export class Server {
     this.asyncCommandHandler.registerHandlers();
     
     // Start the game loop
-    this.session.startLoop(1000); // 1 tick per second
+    const intervalMs = parseInt(process.env.AETHERIUS_TICK_INTERVAL_MS || '1000', 10);
+    if (intervalMs > 0) {
+      this.session.startLoop(intervalMs);
+    }
 
     this.setupMiddleware();
     this.setupRoutes();
   }
 
   private setupMiddleware() {
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: '50mb' }));
     // Basic logging middleware
     this.app.use((req, res, next) => {
       console.log(`[API] ${req.method} ${req.url}`);
       next();
     });
+    this.app.use('/tools', express.static(path.join(process.cwd(), 'tools')));
   }
 
   private setupRoutes() {

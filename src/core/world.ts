@@ -86,7 +86,7 @@ export class World {
 
     const predictions: Record<string, any> = {};
     for (const node of this.nodes.values()) {
-      const pred = this.tfModel.predictForNode(node, this.environment);
+      const pred = this.tfModel.predictForNode(node);
       if (pred) predictions[node.id] = pred;
     }
 

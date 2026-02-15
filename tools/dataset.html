@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aetherius Dataset Generator (WebGPU)</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      label { display: inline-flex; gap: 8px; align-items: center; }
+      input { padding: 6px 8px; }
+      button { padding: 8px 10px; }
+      pre { background: #0b1020; color: #d8e0ff; padding: 12px; border-radius: 8px; overflow: auto; }
+      .hint { color: #555; }
+      .ok { color: #1a7f37; }
+      .bad { color: #b42318; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  </head>
+  <body>
+    <h1>Aetherius 학습데이터 생성기 (브라우저 WebGPU)</h1>
+    <p class="hint">
+      PC방에서는 네이티브 CUDA 설치가 어려우니, 브라우저의 WebGPU로 피처 변환/배치 계산을 GPU로 돌려 학습데이터를 만듭니다.
+      서버는 Tick과 스냅샷 제공만 담당합니다.
+    </p>
+
+    <div class="row">
+      <label>API Base <input id="apiBase" value="/api" size="10" /></label>
+      <label>Steps <input id="steps" type="number" value="200" min="1" /></label>
+      <label>Tick Interval(ms) <input id="interval" type="number" value="0" min="0" /></label>
+      <button id="start">Start</button>
+      <button id="download" disabled>Download JSONL</button>
+      <button id="train" disabled>Train (Linear)</button>
+      <button id="exportModel" disabled>Export Model JSON</button>
+      <button id="applyServer" disabled>Apply to Server</button>
+      <button id="backupGit" disabled>Backup Dataset (Git)</button>
+    </div>
+
+    <div class="row">
+      <label>Epochs <input id="epochs" type="number" value="20" min="1" /></label>
+      <label>Batch <input id="batch" type="number" value="128" min="8" /></label>
+      <label>LR <input id="lr" type="number" value="0.01" step="0.001" min="0.0001" /></label>
+    </div>
+
+    <div class="row">
+      <label>Duration(min) <input id="durationMin" type="number" value="240" min="1" /></label>
+      <label>Cycle Steps <input id="cycleSteps" type="number" value="200" min="1" /></label>
+      <label>Max Rows <input id="maxRows" type="number" value="50000" min="1000" /></label>
+      <label>Backup Every(min) <input id="backupEveryMin" type="number" value="60" min="1" /></label>
+      <button id="auto">Auto Run</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+
+    <p id="status" class="hint"></p>
+    <pre id="log"></pre>
+
+    <script>
+      const logEl = document.getElementById('log');
+      const statusEl = document.getElementById('status');
+      const startBtn = document.getElementById('start');
+      const downloadBtn = document.getElementById('download');
+      const trainBtn = document.getElementById('train');
+      const exportModelBtn = document.getElementById('exportModel');
+      const applyServerBtn = document.getElementById('applyServer');
+      const backupGitBtn = document.getElementById('backupGit');
+      const apiBaseEl = document.getElementById('apiBase');
+      const stepsEl = document.getElementById('steps');
+      const intervalEl = document.getElementById('interval');
+      const epochsEl = document.getElementById('epochs');
+      const batchEl = document.getElementById('batch');
+      const lrEl = document.getElementById('lr');
+      const durationMinEl = document.getElementById('durationMin');
+      const cycleStepsEl = document.getElementById('cycleSteps');
+      const maxRowsEl = document.getElementById('maxRows');
+      const backupEveryMinEl = document.getElementById('backupEveryMin');
+      const autoBtn = document.getElementById('auto');
+      const stopBtn = document.getElementById('stop');
+
+      const rows = [];
+      let running = false;
+      let trained = null;
+      let norm = null;
+      let stopRequested = false;
+      let linearModel = null;
+
+      const FEATURE_ORDER = [
+        'energy',
+        'hydration',
+        'biomass',
+        'w_survive',
+        'w_grow',
+        'w_explore',
+        'purpose_kind'
+      ];
+
+      function log(line) {
+        logEl.textContent += line + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function sleep(ms) {
+        return new Promise((r) => setTimeout(r, ms));
+      }
+
+      function nowIsoSafe() {
+        return new Date().toISOString().replace(/[:.]/g, '-');
+      }
+
+      async function initTf() {
+        const candidates = ['webgpu', 'webgl', 'cpu'];
+        let chosen = 'cpu';
+        for (const b of candidates) {
+          try {
+            const ok = await tf.setBackend(b);
+            if (ok) { chosen = b; break; }
+          } catch (_) {}
+        }
+        await tf.ready();
+        log(`tf backend: ${tf.getBackend()}`);
+        if (tf.getBackend() !== 'webgpu') {
+          log(`(note) webgpu 미사용: ${tf.getBackend()}`);
+        }
+      }
+
+      async function postJson(url, body) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        return res.json();
+      }
+
+      async function getJson(url) {
+        const res = await fetch(url);
+        return res.json();
+      }
+
+      function extractGaRows(snapshot) {
+        const out = [];
+        if (!snapshot || !snapshot.nodes) return out;
+        for (const node of snapshot.nodes) {
+          const ga = node.components && node.components.GoalGA;
+          if (!ga || !ga.genome || !ga.physiology || !ga.growth) continue;
+          out.push({
+            nodeId: node.id,
+            genome: ga.genome,
+            purpose: ga.purpose,
+            physiology: ga.physiology,
+            growth: ga.growth,
+            position: ga.position,
+            metrics: ga.metrics
+          });
+        }
+        return out;
+      }
+
+      function featurize(ga) {
+        const w = ga.genome.weights;
+        return [
+          ga.physiology.energy / 100,
+          ga.physiology.hydration / 100,
+          ga.growth.biomass / 100,
+          w.survive,
+          w.grow,
+          w.explore,
+          ga.purpose && ga.purpose.kind ? hashPurpose(ga.purpose.kind) : 0
+        ];
+      }
+
+      function hashPurpose(kind) {
+        if (kind === 'Survive') return 0.0;
+        if (kind === 'Grow') return 0.5;
+        return 1.0;
+      }
+
+      function computeNormalization(features) {
+        return tf.tidy(() => {
+          const x = tf.tensor2d(features, [features.length, features[0].length]);
+          const meanT = x.mean(0);
+          const centered = x.sub(meanT);
+          const stdT = centered.square().mean(0).add(1e-6).sqrt();
+          const mean = meanT.arraySync();
+          const std = stdT.arraySync();
+          return { mean, std };
+        });
+      }
+
+      function normalizeBatch(features, mean, std) {
+        return tf.tidy(() => {
+          const x = tf.tensor2d(features, [features.length, features[0].length]);
+          const meanT = tf.tensor1d(mean);
+          const stdT = tf.tensor1d(std);
+          const z = x.sub(meanT).div(stdT);
+          return z.arraySync();
+        });
+      }
+
+      function makeDownload(name, text) {
+        const blob = new Blob([text], { type: 'application/x-ndjson' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      const prevByNode = new Map();
+      const rawFeatureRows = [];
+
+      function enforceMaxRows(maxRows) {
+        if (rows.length <= maxRows) return;
+        const drop = rows.length - maxRows;
+        rows.splice(0, drop);
+        rawFeatureRows.splice(0, drop);
+      }
+
+      function recomputeNormalizationAndX() {
+        if (!rawFeatureRows.length) return;
+        norm = computeNormalization(rawFeatureRows);
+        const xNorm = normalizeBatch(rawFeatureRows, norm.mean, norm.std);
+        for (let i = 0; i < rows.length; i++) rows[i].x = xNorm[i];
+      }
+
+      async function collectSteps(steps, intervalMs, maxRows) {
+        const apiBase = apiBaseEl.value.replace(/\/$/, '');
+        let worldId = null;
+
+        for (let i = 0; i < steps; i++) {
+          if (stopRequested) return;
+          statusEl.textContent = `collect tick ${i + 1}/${steps} (rows=${rows.length})`;
+          await postJson(`${apiBase}/tick`, { count: 1 });
+          const snapRes = await getJson(`${apiBase}/snapshot/latest`);
+          const snapshot = snapRes && snapRes.data;
+          if (!snapshot) { log('snapshot 없음'); return; }
+          worldId = snapshot.worldId;
+
+          const gaRows = extractGaRows(snapshot);
+          const feats = gaRows.map(featurize);
+
+          for (let idx = 0; idx < gaRows.length; idx++) {
+            const ga = gaRows[idx];
+            const prev = prevByNode.get(ga.nodeId);
+            const label = prev ? (ga.growth.biomass - prev.biomass) : null;
+            prevByNode.set(ga.nodeId, { biomass: ga.growth.biomass });
+
+            if (label === null) continue;
+
+            const pred = snapshot.predictions && snapshot.predictions[ga.nodeId] ? snapshot.predictions[ga.nodeId] : null;
+
+            rows.push({
+              worldId,
+              tick: snapshot.tick,
+              timestamp: snapshot.timestamp,
+              nodeId: ga.nodeId,
+              x: null,
+              y: label,
+              purpose: ga.purpose,
+              genome: ga.genome,
+              prediction: pred
+            });
+            rawFeatureRows.push(feats[idx]);
+          }
+
+          enforceMaxRows(maxRows);
+
+          if (i % 20 === 0) log(`tick=${snapshot.tick}, rows=${rows.length}`);
+          if (intervalMs > 0) await sleep(intervalMs);
+        }
+
+        if (rows.length > 0) {
+          recomputeNormalizationAndX();
+          log(`norm updated. rows=${rows.length}`);
+        }
+      }
+
+      async function runOnce() {
+        if (running) return;
+        running = true;
+        stopRequested = false;
+        logEl.textContent = '';
+        rows.length = 0;
+        rawFeatureRows.length = 0;
+        prevByNode.clear();
+        trained = null;
+        norm = null;
+        linearModel = null;
+
+        downloadBtn.disabled = true;
+        trainBtn.disabled = true;
+        exportModelBtn.disabled = true;
+        applyServerBtn.disabled = true;
+        backupGitBtn.disabled = true;
+        stopBtn.disabled = true;
+
+        const steps = Math.max(1, Number(stepsEl.value || 1));
+        const interval = Math.max(0, Number(intervalEl.value || 0));
+        const maxRows = Math.max(1000, Number(maxRowsEl.value || 1000));
+
+        await initTf();
+        await collectSteps(steps, interval, maxRows);
+
+        statusEl.textContent = `완료: rows=${rows.length}`;
+        downloadBtn.disabled = rows.length === 0;
+        trainBtn.disabled = rows.length === 0;
+        backupGitBtn.disabled = rows.length === 0;
+      }
+
+      async function trainLinear() {
+        if (!rows.length) return;
+        await initTf();
+
+        const epochs = Math.max(1, Number(epochsEl.value || 1));
+        const batchSize = Math.max(8, Number(batchEl.value || 32));
+        const lr = Math.max(0.0001, Number(lrEl.value || 0.01));
+
+        const xArr = rows.map((r) => r.x);
+        const yArr = rows.map((r) => [r.y]);
+
+        if (!linearModel) {
+          linearModel = tf.sequential();
+          linearModel.add(tf.layers.dense({ units: 1, inputShape: [FEATURE_ORDER.length], useBias: true }));
+          linearModel.compile({ optimizer: tf.train.adam(lr), loss: 'meanSquaredError' });
+        } else {
+          linearModel.compile({ optimizer: tf.train.adam(lr), loss: 'meanSquaredError' });
+        }
+
+        log(`train start. epochs=${epochs}, batch=${batchSize}, lr=${lr}`);
+        await linearModel.fit(tf.tensor2d(xArr), tf.tensor2d(yArr), {
+          epochs,
+          batchSize,
+          validationSplit: 0.2,
+          shuffle: true,
+          callbacks: {
+            onEpochEnd: async (epoch, logs) => {
+              log(`epoch ${epoch + 1}/${epochs} loss=${logs.loss?.toFixed(6)} val=${(logs.val_loss ?? 0).toFixed(6)}`);
+              await tf.nextFrame();
+            }
+          }
+        });
+
+        const w = linearModel.getWeights()[0].arraySync().map((row) => row[0]);
+        const b = linearModel.getWeights()[1].arraySync()[0];
+
+        trained = { weights: w, bias: b };
+        exportModelBtn.disabled = false;
+        applyServerBtn.disabled = false;
+        log(`trained. bias=${b}`);
+      }
+
+      function buildModelJson() {
+        if (!trained || !norm) return null;
+        return {
+          modelType: 'linear',
+          featureOrder: FEATURE_ORDER,
+          mean: norm.mean,
+          std: norm.std,
+          weights: trained.weights,
+          bias: trained.bias
+        };
+      }
+
+      async function applyToServer() {
+        const apiBase = apiBaseEl.value.replace(/\/$/, '');
+        const payload = buildModelJson();
+        if (!payload) return;
+        const res = await postJson(`${apiBase}/model/linear`, payload);
+        log(`apply result: ${JSON.stringify(res)}`);
+      }
+
+      async function backupDatasetToGit() {
+        const apiBase = apiBaseEl.value.replace(/\/$/, '');
+        const ts = nowIsoSafe();
+        const jsonl = rows.map((r) => JSON.stringify(r)).join('\n') + '\n';
+        const res = await postJson(`${apiBase}/dataset/backup`, { jsonl, name: `aetherius-dataset-${ts}.jsonl` });
+        log(`backup result: ${JSON.stringify(res)}`);
+      }
+
+      async function autoRun() {
+        if (running) return;
+        running = true;
+        stopRequested = false;
+        stopBtn.disabled = false;
+        autoBtn.disabled = true;
+
+        await initTf();
+
+        const durationMin = Math.max(1, Number(durationMinEl.value || 1));
+        const cycleSteps = Math.max(1, Number(cycleStepsEl.value || 1));
+        const interval = Math.max(0, Number(intervalEl.value || 0));
+        const maxRows = Math.max(1000, Number(maxRowsEl.value || 1000));
+        const backupEveryMin = Math.max(1, Number(backupEveryMinEl.value || 60));
+
+        const endAt = Date.now() + durationMin * 60 * 1000;
+        let nextBackupAt = Date.now() + backupEveryMin * 60 * 1000;
+
+        log(`auto start. durationMin=${durationMin}, cycleSteps=${cycleSteps}, maxRows=${maxRows}, backupEveryMin=${backupEveryMin}`);
+
+        while (!stopRequested && Date.now() < endAt) {
+          await collectSteps(cycleSteps, interval, maxRows);
+          if (stopRequested) break;
+          if (rows.length > 0) {
+            trainBtn.disabled = false;
+            await trainLinear();
+          }
+          if (Date.now() >= nextBackupAt) {
+            if (rows.length > 0) await backupDatasetToGit();
+            if (trained) await applyToServer();
+            nextBackupAt = Date.now() + backupEveryMin * 60 * 1000;
+          }
+          statusEl.textContent = `auto running... rows=${rows.length}`;
+          await tf.nextFrame();
+        }
+
+        if (rows.length > 0) await backupDatasetToGit();
+        if (trained) await applyToServer();
+
+        statusEl.textContent = stopRequested ? `중지됨: rows=${rows.length}` : `완료: rows=${rows.length}`;
+        log(`auto done. rows=${rows.length}`);
+        downloadBtn.disabled = rows.length === 0;
+        backupGitBtn.disabled = rows.length === 0;
+        stopBtn.disabled = true;
+        autoBtn.disabled = false;
+        running = false;
+        stopRequested = false;
+      }
+
+      startBtn.addEventListener('click', () => runOnce().catch((e) => {
+        console.error(e);
+        log(String(e && e.stack ? e.stack : e));
+        statusEl.textContent = '에러';
+      }).finally(() => { running = false; }));
+
+      downloadBtn.addEventListener('click', () => {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const text = rows.map((r) => JSON.stringify(r)).join('\n') + '\n';
+        makeDownload(`aetherius-dataset-${ts}.jsonl`, text);
+      });
+
+      trainBtn.addEventListener('click', () => trainLinear().catch((e) => {
+        console.error(e);
+        log(String(e && e.stack ? e.stack : e));
+      }));
+
+      exportModelBtn.addEventListener('click', () => {
+        const payload = buildModelJson();
+        if (!payload) return;
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        makeDownload(`aetherius-linear-model-${ts}.json`, JSON.stringify(payload, null, 2));
+      });
+
+      applyServerBtn.addEventListener('click', () => applyToServer().catch((e) => {
+        console.error(e);
+        log(String(e && e.stack ? e.stack : e));
+      }));
+
+      backupGitBtn.addEventListener('click', () => backupDatasetToGit().catch((e) => {
+        console.error(e);
+        log(String(e && e.stack ? e.stack : e));
+      }));
+
+      autoBtn.addEventListener('click', () => autoRun().catch((e) => {
+        console.error(e);
+        log(String(e && e.stack ? e.stack : e));
+        statusEl.textContent = '에러';
+        running = false;
+        stopRequested = false;
+        autoBtn.disabled = false;
+        stopBtn.disabled = true;
+      }));
+
+      stopBtn.addEventListener('click', () => {
+        stopRequested = true;
+        stopBtn.disabled = true;
+      });
+
+      // Handle URL Parameters for CLI Automation
+      window.addEventListener('load', () => {
+        const params = new URLSearchParams(window.location.search);
+        
+        if (params.has('steps')) stepsEl.value = params.get('steps');
+        if (params.has('interval')) intervalEl.value = params.get('interval');
+        if (params.has('duration')) durationMinEl.value = params.get('duration');
+        if (params.has('cycle')) cycleStepsEl.value = params.get('cycle');
+        if (params.has('maxrows')) maxRowsEl.value = params.get('maxrows');
+        if (params.has('backup')) backupEveryMinEl.value = params.get('backup');
+        if (params.has('epochs')) epochsEl.value = params.get('epochs');
+        if (params.has('batch')) batchEl.value = params.get('batch');
+        if (params.has('lr')) lrEl.value = params.get('lr');
+
+        if (params.get('autorun') === 'true') {
+          log('Auto-run triggered by URL parameter...');
+          // Small delay to ensure UI is ready
+          setTimeout(() => autoBtn.click(), 1000);
+        }
+      });
+    </script>
+  </body>
+</html>
