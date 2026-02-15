@@ -53,9 +53,12 @@ export class EnvironmentGrid {
   }
 
   // Chunk 가져오기 (없으면 생성 - Lazy Loading)
-  private getChunk(cx: number, cy: number): Float32Array {
+  // readOnly=true이면 생성하지 않고 undefined 반환
+  private getChunk(cx: number, cy: number, readOnly: boolean = false): Float32Array | undefined {
     const key = this.getChunkKey(cx, cy);
     if (!this.chunks.has(key)) {
+      if (readOnly) return undefined;
+      
       // SharedArrayBuffer를 사용하면 Worker 스레드와 공유 가능 (확장성 고려)
       // 여기서는 표준 Float32Array 사용
       const buffer = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * this.layers);
@@ -86,22 +89,32 @@ export class EnvironmentGrid {
   // 값 읽기
   get(x: number, y: number, layer: EnvLayer): number {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
-    const chunk = this.getChunk(cx, cy);
+    const chunk = this.getChunk(cx, cy, true); // Read-only
+    if (!chunk) return 0; // 빈 공간은 0 (기본값)
     return chunk[localIndexBase + layer];
   }
 
   // 값 쓰기
   set(x: number, y: number, layer: EnvLayer, value: number): void {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
-    const chunk = this.getChunk(cx, cy);
-    chunk[localIndexBase + layer] = value;
+    const chunk = this.getChunk(cx, cy, false); // Create if needed
+    if (chunk) chunk[localIndexBase + layer] = value;
   }
 
   // 값 더하기 (Delta 적용)
   add(x: number, y: number, layer: EnvLayer, delta: number): void {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
-    const chunk = this.getChunk(cx, cy);
-    chunk[localIndexBase + layer] += delta;
+    const chunk = this.getChunk(cx, cy, false); // Create if needed
+    if (chunk) chunk[localIndexBase + layer] += delta;
+  }
+
+  // 활성 청크 순회 (최적화된 시뮬레이션 루프용)
+  // callback(chunkData, chunkX, chunkY, width, height)
+  forEachActiveChunk(callback: (chunk: Float32Array, cx: number, cy: number, w: number, h: number) => void) {
+      for (const [key, chunk] of this.chunks) {
+          const [cx, cy] = key.split(',').map(Number);
+          callback(chunk, cx, cy, CHUNK_SIZE, CHUNK_SIZE);
+      }
   }
 
   // 특정 영역의 평균값 계산 (최적화 필요: 경계면 Chunk 처리 복잡함)
