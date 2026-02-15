@@ -36,6 +36,8 @@ export class CommandHandler {
           return this.handleChangeEnvironment(args);
         case 'status':
           return this.handleStatus(args);
+        case 'latest_snapshot':
+          return await this.handleLatestSnapshot();
         case 'inspect_pos':
           return this.handleInspectPos(args);
         case 'help':
@@ -191,6 +193,12 @@ export class CommandHandler {
     };
   }
 
+  private async handleLatestSnapshot(): Promise<CommandResult> {
+    const snap = await this.world.persistence.getLatestSnapshot(this.world.id);
+    if (!snap) return { success: false, message: 'No snapshot saved yet.' };
+    return { success: true, message: `Latest snapshot (driver=${this.world.persistence.driver})`, data: snap };
+  }
+
   private handleHelp(): CommandResult {
       return {
           success: true,
@@ -200,6 +208,7 @@ export class CommandHandler {
   - change_environment <param> <value>: Change global weather (Legacy)
   - inspect_pos <x> <y>: Check detailed environment at coordinates
   - status [id]: Check entity or world status
+  - latest_snapshot: Show latest tick snapshot (NoSQL adapter)
   - help`
       };
   }
