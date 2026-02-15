@@ -1,12 +1,12 @@
-# Aetherius Scientific Roadmap (과학적 로드맵)
+# Aetherius Technical Roadmap (기술 로드맵)
 
-[🇰🇷 한국어 (Korean)](#aetherius-과학적-로드맵-in-silico-biology) | [🇺🇸 English](#aetherius-scientific-roadmap-in-silico-biology)
+[🇰🇷 한국어 (Korean)](#aetherius-기술-로드맵-in-silico-biology) | [🇺🇸 English](#aetherius-technical-roadmap-in-silico-biology)
 
 ---
 
-# Aetherius 과학적 로드맵: In Silico Biology
+# Aetherius 기술 로드맵: In Silico Biology
 
-이 문서는 Aetherius 시뮬레이션 엔진의 장기적인 과학적 개발 계획을 설명합니다. 목표는 상업적 성공이 아닌, 자연 현상의 정밀한 디지털 재현과 복잡계 시스템에서의 창발적 행동 연구입니다.
+이 문서는 Aetherius 시뮬레이션 엔진의 장기적인 개발 계획을 설명합니다. 현재 단계의 핵심 목표는 자연 현상의 정밀한 디지털 재현과 복잡계 시스템에서의 창발적 행동 구현입니다. 상업적 활용 여부는 엔진의 기술적 기반이 확립된 후 결정될 예정입니다.
 
 ---
 
@@ -116,9 +116,9 @@
 ---
 ---
 
-# Aetherius Scientific Roadmap: In Silico Biology
+# Aetherius Technical Roadmap: In Silico Biology
 
-This document outlines the long-term scientific development plan for the Aetherius simulation engine. The goal is not commercial success, but the accurate digital reproduction of natural phenomena and the study of emergent behavior in complex systems.
+This document outlines the long-term development plan for the Aetherius simulation engine. The primary focus of this phase is the accurate digital reproduction of natural phenomena and the implementation of emergent behavior in complex systems. Commercial viability and application strategies will be determined once the core technological foundation is established.
 
 ---
 
