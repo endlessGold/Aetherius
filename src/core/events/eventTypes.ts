@@ -17,7 +17,7 @@ export enum EventCategory {
 }
 
 // 추상화된 이벤트 정의
-export class GameEvent<T = any> implements BaseEvent {
+export class SimEvent<T = any> implements BaseEvent {
     id: string;
     type: string;
     category: EventCategory;
@@ -38,19 +38,19 @@ export class GameEvent<T = any> implements BaseEvent {
 }
 
 // 구체적인 이벤트 타입들
-export class TickEvent extends GameEvent<{ tickCount: number; deltaTime: number }> {
+export class TickEvent extends SimEvent<{ tickCount: number; deltaTime: number }> {
     constructor(tickCount: number, deltaTime: number) {
         super('Tick', EventCategory.System, { tickCount, deltaTime }, undefined, 2);
     }
 }
 
-export class EntitySpawnEvent extends GameEvent<{ entityType: string; position: { x: number, y: number } }> {
+export class EntitySpawnEvent extends SimEvent<{ entityType: string; position: { x: number, y: number } }> {
     constructor(entityType: string, x: number, y: number, sourceId?: string) {
         super('EntitySpawn', EventCategory.Biological, { entityType, position: { x, y } }, sourceId);
     }
 }
 
-export class WeatherChangeEvent extends GameEvent<{ layer: number; delta: number; x: number; y: number }> {
+export class WeatherChangeEvent extends SimEvent<{ layer: number; delta: number; x: number; y: number }> {
     constructor(layer: number, delta: number, x: number, y: number) {
         super('WeatherChange', EventCategory.Physics, { layer, delta, x, y });
     }

@@ -1,5 +1,6 @@
 import { EventLoop } from './eventLoop.js';
 import { EventBus } from './events/eventBus.js'; // New Event System
+import { EventCategory } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
 export class World {
@@ -18,7 +19,7 @@ export class World {
     }
     setupEventHandlers() {
         // Example: Log all system events
-        this.eventBus.subscribeCategory('System', (event) => {
+        this.eventBus.subscribeCategory(EventCategory.System, (event) => {
             // console.log(`[System] ${event.type} occurred.`);
         });
     }
