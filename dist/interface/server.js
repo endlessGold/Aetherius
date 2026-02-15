@@ -1,9 +1,22 @@
 import express from 'express';
+import { WorldManager } from '../server/worldManager.js';
+import { WorldSession } from '../server/worldSession.js';
+import { AsyncCommandHandler } from '../server/asyncCommandHandler.js';
+import { createRouter } from '../server/router.js';
 export class Server {
     constructor(handler, port = 3000) {
-        this.handler = handler;
         this.port = port;
         this.app = express();
+        // Initialize World System
+        this.worldManager = new WorldManager();
+        // Use the handler's world as the default world
+        const defaultWorld = handler.world;
+        this.session = new WorldSession(defaultWorld);
+        this.asyncCommandHandler = new AsyncCommandHandler(defaultWorld, handler);
+        // Register handlers to the event loop
+        this.asyncCommandHandler.registerHandlers();
+        // Start the game loop
+        this.session.startLoop(1000); // 1 tick per second
         this.setupMiddleware();
         this.setupRoutes();
     }
@@ -16,32 +29,9 @@ export class Server {
         });
     }
     setupRoutes() {
-        // Health check
-        this.app.get('/health', (req, res) => {
-            res.json({ status: 'ok', timestamp: Date.now() });
-        });
-        // Execute arbitrary command
-        // POST /api/command { "cmd": "advance_tick 1" }
-        this.app.post('/api/command', async (req, res) => {
-            const { cmd } = req.body;
-            if (!cmd) {
-                res.status(400).json({ success: false, message: 'Missing "cmd" field in body.' });
-                return;
-            }
-            const result = await this.handler.execute(cmd);
-            res.json(result);
-        });
-        // Shortcuts for specific actions
-        this.app.get('/api/status/:id?', async (req, res) => {
-            const id = req.params.id || '';
-            const result = await this.handler.execute(`status ${id}`);
-            res.json(result);
-        });
-        this.app.post('/api/tick', async (req, res) => {
-            const count = req.body.count || 1;
-            const result = await this.handler.execute(`advance_tick ${count}`);
-            res.json(result);
-        });
+        // Mount the API router
+        const apiRouter = createRouter(this.session);
+        this.app.use('/api', apiRouter);
     }
     start() {
         this.app.listen(this.port, () => {
