@@ -18,6 +18,7 @@ export class WorldSession {
     private isRunning: boolean = false;
     private tickIntervalMs: number = 1000; // 1초
     private tickTimer: NodeJS.Timeout | null = null;
+    private isTicking: boolean = false;
 
     constructor(world: World) {
         this.world = world;
@@ -31,7 +32,7 @@ export class WorldSession {
         console.log(`[WorldSession] Starting tick loop for world ${this.world.id} (${intervalMs}ms)`);
         
         this.tickTimer = setInterval(() => {
-            this.processTick();
+            void this.processTick();
         }, this.tickIntervalMs);
     }
 
@@ -67,13 +68,17 @@ export class WorldSession {
         });
     }
 
-    private processTick() {
+    private async processTick(): Promise<void> {
+        if (this.isTicking) return;
+        this.isTicking = true;
         try {
             // 1. World Tick 실행 (여기서 내부 큐에 쌓인 이벤트들이 처리됨)
             // AsyncRequestEvent는 별도의 핸들러가 처리해야 함
-            this.world.tick();
+            await this.world.tick();
         } catch (error) {
             console.error(`[WorldSession] Tick error in world ${this.world.id}:`, error);
+        } finally {
+            this.isTicking = false;
         }
     }
 }

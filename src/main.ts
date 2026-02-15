@@ -8,14 +8,31 @@ import { Server } from './interface/server.js';
 async function main() {
   console.log("🌌 Initializing Aetherius Engine Core...");
 
-  // 1. Core System Initialization
-  const world = new World("Alpha");
-  
   // Create Global Weather Entity (The environment controller)
   const weatherEntity = new Entity("global_weather");
   const weatherComp = new WeatherComponent();
   weatherEntity.addComponent(weatherComp);
+
+  const world = new World("Alpha", {
+    tickPayloadProvider: () => ({
+      environment: {
+        soilMoisture:
+          weatherComp.state.condition === 'Rainy' || weatherComp.state.condition === 'Stormy'
+            ? 80
+            : weatherComp.state.condition === 'Drought'
+              ? 10
+              : 40,
+        light: weatherComp.state.sunlightIntensity || 100,
+        temperature: weatherComp.state.temperature,
+        soilNutrients: 50,
+        co2Level: weatherComp.state.co2Level || 400,
+        windSpeed: weatherComp.state.windSpeed || 0,
+        humidity: weatherComp.state.humidity || 50
+      }
+    })
+  });
   world.addNode(weatherEntity);
+
 
   // Pre-seed some entities for testing
   const plantA = new Entity("Plant_A_Ideal");

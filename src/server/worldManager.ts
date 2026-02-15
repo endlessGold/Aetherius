@@ -24,13 +24,13 @@ export class WorldManager {
     }
 
     // Tick all worlds
-    tickAll(): void {
-        this.worlds.forEach(world => {
+    async tickAll(): Promise<void> {
+        for (const world of this.worlds.values()) {
             try {
-                world.tick();
+                await world.tick();
             } catch (e) {
                 console.error(`[WorldManager] Error ticking world ${world.id}:`, e);
             }
-        });
+        }
     }
 }

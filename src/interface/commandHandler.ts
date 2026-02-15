@@ -29,7 +29,7 @@ export class CommandHandler {
     try {
       switch (command) {
         case 'advance_tick':
-          return this.handleAdvanceTick(args);
+          return await this.handleAdvanceTick(args);
         case 'spawn_entity':
           return this.handleSpawnEntity(args);
         case 'change_environment':
@@ -48,26 +48,12 @@ export class CommandHandler {
     }
   }
 
-  private handleAdvanceTick(args: string[]): CommandResult {
+  private async handleAdvanceTick(args: string[]): Promise<CommandResult> {
     const count = parseInt(args[0], 10) || 1;
-    let currentTick = 0; // In a real app, world should track global tick
-    
-    // Simulate ticks
     for (let i = 0; i < count; i++) {
-        // Construct payload. Ideally this comes from the WeatherEntity state.
-        const weatherComp = this.weatherEntity.components.get('Weather') as WeatherComponent;
-        const envData = this.getEnvironmentData(weatherComp);
-
-        const tickEvent = {
-            type: 'Tick',
-            payload: { tick: Date.now(), environment: envData }, // Simple timestamp as tick ID for now
-            timestamp: Date.now()
-        };
-
-        this.world.nodes.forEach(node => node.handleEvent(tickEvent));
+      await this.world.tick();
     }
-
-    return { success: true, message: `Advanced ${count} ticks.` };
+    return { success: true, message: `Advanced ${count} ticks. (worldTick=${this.world.tickCount})` };
   }
 
   private handleSpawnEntity(args: string[]): CommandResult {
@@ -216,18 +202,5 @@ export class CommandHandler {
   - status [id]: Check entity or world status
   - help`
       };
-  }
-
-  // Helper to extract environment for Tick payload
-  private getEnvironmentData(weather: WeatherComponent) {
-    return {
-      soilMoisture: weather.state.condition === 'Rainy' || weather.state.condition === 'Stormy' ? 80 : (weather.state.condition === 'Drought' ? 10 : 40),
-      light: weather.state.sunlightIntensity || 100,
-      temperature: weather.state.temperature,
-      soilNutrients: 50,
-      co2Level: weather.state.co2Level || 400,
-      windSpeed: weather.state.windSpeed || 0,
-      humidity: weather.state.humidity || 50
-    };
   }
 }
