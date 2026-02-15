@@ -8,7 +8,7 @@ export var EventCategory;
     EventCategory["Command"] = "Command";
 })(EventCategory || (EventCategory = {}));
 // 추상화된 이벤트 정의
-export class GameEvent {
+export class SimEvent {
     constructor(type, category, payload, sourceId, priority = 1) {
         this.id = Math.random().toString(36).substr(2, 9);
         this.type = type;
@@ -20,17 +20,17 @@ export class GameEvent {
     }
 }
 // 구체적인 이벤트 타입들
-export class TickEvent extends GameEvent {
+export class TickEvent extends SimEvent {
     constructor(tickCount, deltaTime) {
         super('Tick', EventCategory.System, { tickCount, deltaTime }, undefined, 2);
     }
 }
-export class EntitySpawnEvent extends GameEvent {
+export class EntitySpawnEvent extends SimEvent {
     constructor(entityType, x, y, sourceId) {
         super('EntitySpawn', EventCategory.Biological, { entityType, position: { x, y } }, sourceId);
     }
 }
-export class WeatherChangeEvent extends GameEvent {
+export class WeatherChangeEvent extends SimEvent {
     constructor(layer, delta, x, y) {
         super('WeatherChange', EventCategory.Physics, { layer, delta, x, y });
     }
