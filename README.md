@@ -90,10 +90,11 @@ npm start -- --mode server
 
 ---
 
-## 6. 과학적 개발 로드맵 (Scientific Development Roadmap)
+## 6. 핵심 개발 로드맵 (Core Development Roadmap)
 
-상업적 이익이 아닌, **시뮬레이션의 정밀도(Accuracy)**, **재현성(Reproducibility)**, **창발성(Emergence)**을 목표로 하는 순수 연구 개발 계획입니다.
-자세한 3개년 연구 계획은 [ROADMAP.md](ROADMAP.md)를 참조하십시오.
+본 로드맵은 시뮬레이션 엔진의 **정밀도(Accuracy)**, **재현성(Reproducibility)**, **창발성(Emergence)**을 확보하기 위한 기술적 마일스톤에 집중합니다.
+사업적 활용 방안(상용화 또는 순수 연구)은 엔진의 기반이 완성된 후 결정될 예정입니다.
+자세한 3개년 계획은 [ROADMAP.md](ROADMAP.md)를 참조하십시오.
 
 ### **Phase 1: 기초 물리 및 환경 역학 (1~3개월)**
 *결정론적 환경 시뮬레이션의 수학적 모델 확립*
