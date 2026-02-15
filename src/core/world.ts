@@ -1,13 +1,15 @@
 import { NodeInterface } from './interfaces.js';
 import { EventLoop } from './eventLoop.js';
-import { Event } from './interfaces.js';
+import { EventBus } from './events/eventBus.js'; // New Event System
+import { EventCategory } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
 
 export class World {
   id: string;
   nodes: Map<string, NodeInterface> = new Map();
-  eventLoop: EventLoop = new EventLoop();
+  eventLoop: EventLoop = new EventLoop(); // Legacy, to be migrated
+  eventBus: EventBus = new EventBus(); // New Advanced Event System
   
   // High-Resolution Simulation Components
   environment: EnvironmentGrid;
@@ -21,6 +23,16 @@ export class World {
     this.environment = new EnvironmentGrid(100, 100); 
     this.natureSystem = new NatureSystem(this.environment);
     this.natureSystem.initializeWorld();
+
+    // Register Systems to EventBus
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    // Example: Log all system events
+    this.eventBus.subscribeCategory(EventCategory.System, (event) => {
+        // console.log(`[System] ${event.type} occurred.`);
+    });
   }
 
   addNode(node: NodeInterface): void {
@@ -32,14 +44,17 @@ export class World {
     return this.nodes.get(id);
   }
 
-  tick(): void {
-    // 1. Process Event Loop (Global events)
+  async tick(): Promise<void> {
+    // 1. Process Legacy Event Loop (Global events)
     this.eventLoop.tick();
 
-    // 2. Simulate High-Res Physics
+    // 2. Process New Event Bus Queue
+    await this.eventBus.processQueue();
+
+    // 3. Simulate High-Res Physics
     this.natureSystem.simulate(Date.now());
 
-    // 3. Propagate Tick event to all nodes
+    // 4. Propagate Tick event to all nodes
     // In a massive world, we might want to optimize this (e.g., chunks, active regions)
     const tickEvent = {
       type: 'Tick',
