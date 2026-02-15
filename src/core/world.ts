@@ -1,7 +1,7 @@
 import { NodeInterface } from './interfaces.js';
 import { EventLoop } from './eventLoop.js';
 import { Event } from './interfaces.js';
-import { EnvironmentGrid, EnvLayer } from './environment/environmentGrid.js';
+import { EnvironmentGrid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
 
 export class World {
