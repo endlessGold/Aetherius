@@ -1,6 +1,7 @@
 import { Entity } from '../core/node.js';
 import { PlantComponent } from '../components/basicComponents.js';
 import { v4 as uuidv4 } from 'uuid';
+import { EnvLayer } from '../core/environment/environmentGrid.js';
 export class CommandHandler {
     constructor(world, weatherEntity) {
         this.world = world;
@@ -22,6 +23,8 @@ export class CommandHandler {
                     return this.handleChangeEnvironment(args);
                 case 'status':
                     return this.handleStatus(args);
+                case 'inspect_pos':
+                    return this.handleInspectPos(args);
                 case 'help':
                     return this.handleHelp();
                 default:
@@ -136,14 +139,38 @@ export class CommandHandler {
             };
         }
     }
+    handleInspectPos(args) {
+        const x = parseInt(args[0]);
+        const y = parseInt(args[1]);
+        if (isNaN(x) || isNaN(y)) {
+            return { success: false, message: "Usage: inspect_pos <x> <y>" };
+        }
+        if (x < 0 || x >= this.world.environment.width || y < 0 || y >= this.world.environment.height) {
+            return { success: false, message: "Coordinates out of bounds." };
+        }
+        const grid = this.world.environment;
+        const data = {
+            Temperature: grid.get(x, y, EnvLayer.Temperature).toFixed(2) + "°C",
+            Humidity: (grid.get(x, y, EnvLayer.Humidity) * 100).toFixed(1) + "%",
+            SoilMoisture: (grid.get(x, y, EnvLayer.SoilMoisture) * 100).toFixed(1) + "%",
+            Nitrogen: grid.get(x, y, EnvLayer.SoilNitrogen).toFixed(2),
+            Light: grid.get(x, y, EnvLayer.LightIntensity).toFixed(0) + " Lux"
+        };
+        return {
+            success: true,
+            message: `Environment at (${x}, ${y}):`,
+            data
+        };
+    }
     handleHelp() {
         return {
             success: true,
             message: `Available commands:
   - advance_tick [count]
-  - spawn_entity <plant> [name]
-  - change_environment <condition|temp|humidity> <value>
-  - status [name_or_id]
+  - spawn_entity <type> <name>: Create a new entity (types: plant)
+  - change_environment <param> <value>: Change global weather (Legacy)
+  - inspect_pos <x> <y>: Check detailed environment at coordinates
+  - status [id]: Check entity or world status
   - help`
         };
     }

@@ -202,9 +202,10 @@ export class CommandHandler {
           success: true,
           message: `Available commands:
   - advance_tick [count]
-  - spawn_entity <plant> [name]
-  - change_environment <condition|temp|humidity> <value>
-  - status [name_or_id]
+  - spawn_entity <type> <name>: Create a new entity (types: plant)
+  - change_environment <param> <value>: Change global weather (Legacy)
+  - inspect_pos <x> <y>: Check detailed environment at coordinates
+  - status [id]: Check entity or world status
   - help`
       };
   }
