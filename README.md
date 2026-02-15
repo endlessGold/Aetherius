@@ -157,4 +157,4 @@ npm start -- --mode server
 
 ---
 
-*Copyright © 2026 EndlessGames. All Rights Reserved.*
+*Copyright © 2026 EndlessGames. Licensed under the MIT License.*
