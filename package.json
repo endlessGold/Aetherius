@@ -5,16 +5,19 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "ts-node src/main.ts",
+    "start": "node --loader ts-node/esm src/main.ts",
+    "start:server": "node --loader ts-node/esm src/main.ts --mode=server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.21.2",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^22.13.4",
     "@types/uuid": "^10.0.0",
     "ts-node": "^10.9.2",
