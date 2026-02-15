@@ -17,7 +17,7 @@ export enum EventCategory {
 }
 
 // 추상화된 최상위 이벤트 정의
-export class SimEvent<T = any> implements BaseEvent {
+export class SimulationEvent<T = any> implements BaseEvent {
     id: string;
     type: string;
     category: EventCategory;
@@ -40,8 +40,8 @@ export class SimEvent<T = any> implements BaseEvent {
 // --- 네임스페이스 기반 이벤트 구조 ---
 
 // 환경/물리 (Environment/Physics)
-export namespace Env {
-    export class Event<T = any> extends SimEvent<T> {
+export namespace Environment {
+    export class Event<T = any> extends SimulationEvent<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Physics, payload, sourceId, priority);
         }
@@ -55,8 +55,8 @@ export namespace Env {
 }
 
 // 생물 (Biological)
-export namespace Bio {
-    export class Event<T = any> extends SimEvent<T> {
+export namespace Biological {
+    export class Event<T = any> extends SimulationEvent<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Biological, payload, sourceId, priority);
         }
@@ -70,8 +70,8 @@ export namespace Bio {
 }
 
 // 시스템 (System)
-export namespace Sys {
-    export class Event<T = any> extends SimEvent<T> {
+export namespace System {
+    export class Event<T = any> extends SimulationEvent<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 2) {
             super(type, EventCategory.System, payload, sourceId, priority);
         }
@@ -85,8 +85,8 @@ export namespace Sys {
 }
 
 // 명령 (Command)
-export namespace Cmd {
-    export class Event<T = any> extends SimEvent<T> {
+export namespace Command {
+    export class Event<T = any> extends SimulationEvent<T> {
         constructor(type: string, payload: T, sourceId?: string, priority: number = 1) {
             super(type, EventCategory.Command, payload, sourceId, priority);
         }

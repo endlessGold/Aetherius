@@ -31,7 +31,7 @@ export class World {
   private setupEventHandlers() {
     // Example: Log all system events
     this.eventBus.subscribeCategory(EventCategory.System, (event) => {
-        // console.log(`[System] ${event.type} occurred.`);
+        console.log(`[System] ${event.type} occurred.`);
     });
   }
 
