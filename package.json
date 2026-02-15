@@ -10,8 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "EndlessGames",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.21.2",
     "uuid": "^11.0.5"
