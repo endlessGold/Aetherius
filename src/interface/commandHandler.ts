@@ -2,6 +2,7 @@ import { World } from '../core/world.js';
 import { Entity } from '../core/node.js';
 import { PlantComponent, WeatherComponent } from '../components/basicComponents.js';
 import { v4 as uuidv4 } from 'uuid';
+import { EnvLayer } from '../core/environment/environmentGrid.js';
 
 export interface CommandResult {
   success: boolean;
