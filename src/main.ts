@@ -1,6 +1,6 @@
 import { World } from './core/world.js';
 import { Entity } from './core/node.js';
-import { WeatherComponent, PlantComponent } from './components/basicComponents.js';
+import { WeatherComponent, PlantComponent, GoalGAComponent } from './components/basicComponents.js';
 import { CommandHandler } from './interface/commandHandler.js';
 import { CLI } from './interface/cli.js';
 import { Server } from './interface/server.js';
@@ -21,6 +21,10 @@ async function main() {
   const plantA = new Entity("Plant_A_Ideal");
   plantA.addComponent(new PlantComponent("Sunflower_A"));
   world.addNode(plantA);
+
+  const gaA = new Entity("GA_Alpha");
+  gaA.addComponent(new GoalGAComponent({ position: { x: 10, y: 10 } }));
+  world.addNode(gaA);
 
   // 2. Setup Command Handler (Virtual Command Layer)
   const commandHandler = new CommandHandler(world, weatherEntity);

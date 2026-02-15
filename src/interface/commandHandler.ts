@@ -1,6 +1,6 @@
 import { World } from '../core/world.js';
 import { Entity } from '../core/node.js';
-import { PlantComponent, WeatherComponent } from '../components/basicComponents.js';
+import { PlantComponent, WeatherComponent, GoalGAComponent } from '../components/basicComponents.js';
 import { v4 as uuidv4 } from 'uuid';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
 
@@ -75,13 +75,21 @@ export class CommandHandler {
     const name = args[1] || `Entity_${uuidv4().slice(0, 8)}`;
 
     if (!type) {
-      return { success: false, message: "Usage: spawn_entity <plant|basic> [name]" };
+      return { success: false, message: "Usage: spawn_entity <plant|ga|basic> [name]" };
     }
 
     const entity = new Entity(name);
     
     if (type === 'plant') {
       entity.addComponent(new PlantComponent(name));
+    } else if (type === 'ga') {
+      const x = Math.floor(Math.random() * this.world.environment.width);
+      const y = Math.floor(Math.random() * this.world.environment.height);
+      entity.addComponent(
+        new GoalGAComponent({
+          position: { x, y }
+        })
+      );
     } else {
       // Basic empty entity or generic
     }
@@ -202,7 +210,7 @@ export class CommandHandler {
           success: true,
           message: `Available commands:
   - advance_tick [count]
-  - spawn_entity <type> <name>: Create a new entity (types: plant)
+  - spawn_entity <type> <name>: Create a new entity (types: plant, ga)
   - change_environment <param> <value>: Change global weather (Legacy)
   - inspect_pos <x> <y>: Check detailed environment at coordinates
   - status [id]: Check entity or world status
