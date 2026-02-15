@@ -36,6 +36,8 @@ export class CommandHandler {
           return this.handleChangeEnvironment(args);
         case 'status':
           return this.handleStatus(args);
+        case 'inspect_pos':
+          return this.handleInspectPos(args);
         case 'help':
           return this.handleHelp();
         default:
@@ -165,6 +167,34 @@ export class CommandHandler {
             } 
         };
     }
+  }
+
+  private handleInspectPos(args: string[]): CommandResult {
+    const x = parseInt(args[0]);
+    const y = parseInt(args[1]);
+    
+    if (isNaN(x) || isNaN(y)) {
+        return { success: false, message: "Usage: inspect_pos <x> <y>" };
+    }
+
+    if (x < 0 || x >= this.world.environment.width || y < 0 || y >= this.world.environment.height) {
+        return { success: false, message: "Coordinates out of bounds." };
+    }
+
+    const grid = this.world.environment;
+    const data = {
+        Temperature: grid.get(x, y, EnvLayer.Temperature).toFixed(2) + "°C",
+        Humidity: (grid.get(x, y, EnvLayer.Humidity) * 100).toFixed(1) + "%",
+        SoilMoisture: (grid.get(x, y, EnvLayer.SoilMoisture) * 100).toFixed(1) + "%",
+        Nitrogen: grid.get(x, y, EnvLayer.SoilNitrogen).toFixed(2),
+        Light: grid.get(x, y, EnvLayer.LightIntensity).toFixed(0) + " Lux"
+    };
+
+    return { 
+        success: true, 
+        message: `Environment at (${x}, ${y}):`,
+        data 
+    };
   }
 
   private handleHelp(): CommandResult {
