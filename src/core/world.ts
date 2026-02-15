@@ -18,9 +18,10 @@ export class World {
   constructor(id: string) {
     this.id = id;
     
-    // Create a 100x100 grid for demonstration (10,000 cells * 16 layers = 160,000 parameters)
-    // Scale up to 1000x1000 for "billion" scale logic if memory allows
-    this.environment = new EnvironmentGrid(100, 100); 
+    // Create a massive world grid (7000x7000 default)
+    // 21 layers * 49M cells ≈ 1 Billion parameters
+    // Chunk system handles memory efficiently
+    this.environment = new EnvironmentGrid(); 
     this.natureSystem = new NatureSystem(this.environment);
     this.natureSystem.initializeWorld();
 
