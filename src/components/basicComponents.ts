@@ -1,5 +1,6 @@
 export * from './weatherComponent.js';
 export * from './plantComponent.js';
+export * from './goalGaComponent.js';
 
 import { Component, Event } from '../core/interfaces.js';
 
@@ -33,4 +34,3 @@ export class SpeciesComponent implements Component {
     }
   }
 }
-
