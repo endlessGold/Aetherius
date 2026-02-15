@@ -87,6 +87,7 @@ npm start -- --mode server
 2.  **Source of Truth**: GitHub 리포지토리를 유일한 진실의 원천(Single Source of Truth)으로 관리.
 3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈([Aetherius-Secrets](https://github.com/endlessGold/Aetherius-Secrets))로 분리하여 관리.
 4.  **Automation**: `auto-sync.ps1` 스크립트를 통해 공용 환경에서도 안전하게 작업 동기화.
+5.  **Code Rules**: 구현/용어 기준은 [CODE_RULES.md](CODE_RULES.md)를 따른다. (이 프로젝트의 “ECS”는 전통적 일괄처리 ECS가 아니라 이벤트 기반 하이브리드 의미)
 
 ---
 
