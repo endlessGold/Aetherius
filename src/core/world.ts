@@ -7,6 +7,7 @@ import { NatureSystem } from './environment/natureSystem.js';
 import { GoalGASystem } from './systems/goalGASystem.js';
 import { createPersistenceFromEnv, Persistence } from '../data/persistence.js';
 import { NodeSnapshot, TickSnapshot } from '../data/noSqlAdapter.js';
+import { TensorFlowModel } from '../ai/tensorFlowModel.js';
 
 export class World {
   id: string;
@@ -15,15 +16,19 @@ export class World {
   eventBus: EventBus = new EventBus(); // New Advanced Event System
   tickCount: number = 0;
   persistence: Persistence;
+  tfModel: TensorFlowModel;
+  private tickPayloadProvider: () => Record<string, any>;
   
   // High-Resolution Simulation Components
   environment: EnvironmentGrid;
   natureSystem: NatureSystem;
   goalGASystem: GoalGASystem;
 
-  constructor(id: string, options?: { persistence?: Persistence }) {
+  constructor(id: string, options?: { persistence?: Persistence; tickPayloadProvider?: () => Record<string, any> }) {
     this.id = id;
     this.persistence = options?.persistence ?? createPersistenceFromEnv();
+    this.tfModel = new TensorFlowModel();
+    this.tickPayloadProvider = options?.tickPayloadProvider ?? (() => ({}));
     
     // Create a massive world grid (7000x7000 default)
     // 21 layers * 49M cells ≈ 1 Billion parameters
@@ -71,7 +76,7 @@ export class World {
     // In a massive world, we might want to optimize this (e.g., chunks, active regions)
     const tickEvent = {
       type: 'Tick',
-      payload: {},
+      payload: { ...this.tickPayloadProvider(), tickCount: this.tickCount },
       timestamp: Date.now()
     };
 
@@ -79,11 +84,17 @@ export class World {
       node.handleEvent(tickEvent);
     });
 
-    const snapshot = this.buildSnapshot(Date.now());
+    const predictions: Record<string, any> = {};
+    for (const node of this.nodes.values()) {
+      const pred = this.tfModel.predictForNode(node, this.environment);
+      if (pred) predictions[node.id] = pred;
+    }
+
+    const snapshot = this.buildSnapshot(Date.now(), Object.keys(predictions).length > 0 ? predictions : undefined);
     await this.persistence.saveTickSnapshot(snapshot);
   }
 
-  private buildSnapshot(timestamp: number): TickSnapshot {
+  private buildSnapshot(timestamp: number, predictions?: Record<string, any>): TickSnapshot {
     const nodes: NodeSnapshot[] = [];
     for (const node of this.nodes.values()) {
       const components: Record<string, any> = {};
@@ -92,6 +103,6 @@ export class World {
       });
       nodes.push({ id: node.id, type: node.type, components });
     }
-    return { worldId: this.id, tick: this.tickCount, timestamp, nodes };
+    return { worldId: this.id, tick: this.tickCount, timestamp, nodes, predictions };
   }
 }
