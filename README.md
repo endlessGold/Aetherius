@@ -94,6 +94,55 @@ manager.listenUpdate({ world, deltaTime: 1.0 });
 manager.update();
 ```
 
+## 2.6 Behavior Function Pattern (동작 함수 패턴)
+
+복잡한 행동 로직을 재사용 가능한 **전역 함수(Behavior Function)** 단위로 분리하여 조립하는 패턴입니다.
+`BehaviorNode`는 상태(Component)만 관리하고, 실제 로직은 `function`으로 위임하여 조합성(Composability)을 극대화합니다.
+
+### 특징
+- **전역 함수**: 클래스 메서드가 아닌 순수 함수(`function`)로 로직 구현.
+- **명시적 매개변수**: `(node, context)`를 인자로 받아 상태에 접근.
+- **조합 가능**: `this.use(func)` 메서드로 여러 함수를 레고처럼 조립.
+
+### 예제 코드
+
+**1. 전역 함수 정의**
+```typescript
+import { BehaviorNode, UpdateContext } from './src/entities/assembly.js';
+
+// 광합성: 빛을 에너지로 변환
+export function photosynthesis(node: BehaviorNode<PlantData>, context: UpdateContext): void {
+    const components = node.components;
+    // ... 로직 구현 ...
+    if (light > 50) components.energy.energy += 0.1;
+}
+
+// 수분 흡수: 토양 수분을 체력으로 변환
+export function absorbWater(node: BehaviorNode<PlantData>, context: UpdateContext): void {
+    const components = node.components;
+    // ... 로직 구현 ...
+    if (moisture > 20) components.vitality.hp += 0.1;
+}
+```
+
+**2. 노드에서 조립**
+```typescript
+export class PlantBehavior extends BehaviorNode<PlantData> {
+    constructor(components: PlantData) {
+        super(components);
+        
+        // 함수 조립 (Composition)
+        this.use(photosynthesis);
+        this.use(absorbWater);
+        
+        // 필요 시 고유 로직 추가 가능
+        this.on(SystemEvent.ListenUpdate, (c, ctx) => { /* ... */ });
+    }
+}
+```
+
+---
+
 ## 3. 기술 스택 (Tech Stack)
 
 - **Language**: TypeScript (NodeNext Module System)

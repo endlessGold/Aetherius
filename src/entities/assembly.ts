@@ -26,6 +26,8 @@ export enum SystemEvent {
   ListenUpdate
 }
 
+export type BehaviorFunction<C extends object> = (node: BehaviorNode<C>, context: UpdateContext) => void;
+
 // ---------------------- Node Interface ----------------------
 
 export interface INode<C extends object, TChild extends INode<any, any> = INode<any, any>> {
@@ -100,6 +102,10 @@ export abstract class BehaviorNode<C extends object> extends Node<C> {
       this.contextListeners.set(event, []);
     }
     this.contextListeners.get(event)!.push(listener as (components: C, context: UpdateContext) => void);
+  }
+
+  use(fn: BehaviorFunction<C>): void {
+    this.on(SystemEvent.ListenUpdate, (components, context) => fn(this, context));
   }
 
 }
