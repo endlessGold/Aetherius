@@ -51,6 +51,49 @@
 
 ---
 
+## 2.5 ECR/ECE 패턴
+
+이 프로젝트의 ECR/ECE는 전통적 ECS의 일괄 처리와 달리, 이벤트 중심으로 반응을 구성하는 하이브리드 구조입니다.
+
+- **Entity**: 상태를 묶는 단위이며 하위 노드를 보유합니다.
+- **Component**: 순수 데이터 모델이며 상태만 보유합니다.
+- **Reaction/Event**: 이벤트(SystemEvent)에 반응하는 함수로, BehaviorNode가 등록/실행합니다.
+
+### 예제
+
+```ts
+import { AssembleManager, BehaviorNode, Entity, SystemEvent, UpdateContext } from './src/entities/assembly.js';
+import { World } from './src/core/world.js';
+
+type DroneData = {
+  position: { x: number; y: number };
+  energy: { value: number };
+};
+
+class DroneBehavior extends BehaviorNode<DroneData> {
+  constructor(components: DroneData) {
+    super(components);
+    this.on(SystemEvent.ListenUpdate, (c, context: UpdateContext) => {
+      c.energy.value = Math.max(0, c.energy.value - 0.1 * context.deltaTime);
+      c.position.x += 0.5 * context.deltaTime;
+    });
+  }
+}
+
+const manager = new AssembleManager();
+const world = new World('Example');
+
+manager.createEntity(Entity, 'Drone_001', [], [
+  {
+    NodeClass: DroneBehavior,
+    components: { position: { x: 0, y: 0 }, energy: { value: 100 } }
+  }
+]);
+
+manager.listenUpdate({ world, deltaTime: 1.0 });
+manager.update();
+```
+
 ## 3. 기술 스택 (Tech Stack)
 
 - **Language**: TypeScript (NodeNext Module System)
