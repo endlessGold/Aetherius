@@ -1,7 +1,7 @@
 import { BehaviorNode, SystemEvent, Entity, UpdateContext } from './assembly.js';
 import { WeatherData, PlantData, CreatureData } from '../components/entityData.js';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
-import { photosynthesis, absorbWater, metabolism, randomWalk, agingProcess, keepBounds } from './behaviorFunctions.js';
+import { photosynthesis, absorbWater, metabolism, randomWalk, agingProcess, keepBounds, wildfire, floodDamage, huntPrey } from './behaviorFunctions.js';
 
 // ======================================================
 // Behavior Implementations
@@ -29,17 +29,19 @@ export class WeatherBehavior extends BehaviorNode<WeatherData> {
 export class PlantBehavior extends BehaviorNode<PlantData> {
     constructor(components: PlantData) {
         super(components);
-        
+
         // Use composable behavior functions
         this.use(photosynthesis);
         this.use(absorbWater);
         this.use(agingProcess);
-        
+        this.use(wildfire);
+        this.use(floodDamage);
+
         // Custom Logic specific to this plant (e.g., stage progression)
         this.on(SystemEvent.ListenUpdate, (c, context) => {
-             if (c.vitality.hp <= 0) return;
+            if (c.vitality.hp <= 0) return;
 
-             // Stage progression logic remains here as it's specific to this plant type for now
+            // Stage progression logic remains here as it's specific to this plant type for now
             if (c.age.age > 10 && c.growth.stage === 'seed') c.growth.stage = 'sprout';
             if (c.age.age > 50 && c.growth.stage === 'sprout') c.growth.stage = 'mature';
             if (c.age.age > 100) {
@@ -54,12 +56,14 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
 export class CreatureBehavior extends BehaviorNode<CreatureData> {
     constructor(components: CreatureData) {
         super(components);
-        
+
         // Use composable behavior functions
         this.use(metabolism);
         this.use(agingProcess);
         this.use(randomWalk);
         this.use(keepBounds);
+        this.use(floodDamage);
+        this.use(huntPrey);
     }
 
 }

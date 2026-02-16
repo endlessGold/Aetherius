@@ -85,9 +85,24 @@ async function main() {
 
   // Pre-seed some entities for testing
   worlds.forEach(({ world, manager }) => {
+    // Basic Ecosystem
     createEntityByAssemblyWithManager(manager, 'Plant_Species_001', `${world.id}_Plant_A`);
-    createEntityByAssemblyWithManager(manager, 'Creature_Type_001', `${world.id}_GA_A`);
+    createEntityByAssemblyWithManager(manager, 'Creature_Type_001', `${world.id}_Creature_A`);
+
+    // Add more entities to increase chaos
+    if (world.id === 'Beta') { // Beta world is chaotic (Rainy)
+      createEntityByAssemblyWithManager(manager, 'Plant_Species_005', `${world.id}_Plant_B`);
+      createEntityByAssemblyWithManager(manager, 'Plant_Species_005', `${world.id}_Plant_C`);
+      createEntityByAssemblyWithManager(manager, 'Creature_Type_010', `${world.id}_Creature_B`);
+    }
+
+    if (world.id === 'Gamma') { // Gamma world is harsh (Drought)
+      createEntityByAssemblyWithManager(manager, 'Creature_Type_020', `${world.id}_Survivor_A`);
+    }
   });
+
+  // Create some event nodes for storytelling (Optional)
+  // Currently handled by behaviors directly logging events like [WILDFIRE], [FLOOD]
 
   // 2. Setup Command Handler (Virtual Command Layer)
   const commandHandler = new CommandHandler(world, weatherEntity as any);
