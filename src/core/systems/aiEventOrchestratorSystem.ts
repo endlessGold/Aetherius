@@ -74,7 +74,7 @@ export class AIEventOrchestratorSystem extends BaseSystem {
     const events = this.eventBuffer.splice(0, this.eventBuffer.length);
 
     const prompt = this.buildPrompt(context, events);
-    const decision = await this.llm.generateDecision(prompt, null);
+    const decision = (await this.llm.generateDecision(prompt, null)) as { actions?: AIAction[] } | null | undefined;
     const actions: AIAction[] = Array.isArray(decision?.actions) ? decision.actions : [];
 
     if (actions.length === 0) return;

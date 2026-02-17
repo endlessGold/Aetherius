@@ -160,6 +160,13 @@ node dist/main.js --mode=cli --worlds=Alpha,Beta
   - LLM API 키는 환경 변수로 설정(.env 등).  
   - 예: `ask_science What is the population trend?`
 
+  **런타임 중 호출 방법**
+  - **CLI**: 서버/CLI 실행 후 프롬프트 `Divine Will>` 에서 `ask_science 질문` 입력.
+  - **서버(HTTP)**  
+    - `POST /api/command` body: `{ "cmd": "ask_science 질문" }`  
+    - `GET /api/science?q=질문`  
+    - `POST /api/science` body: `{ "query": "질문" }`
+
 - **`ai_events <on|off>`**  
   - AI 이벤트 오케스트레이터 켜기/끄기.
 

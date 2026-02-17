@@ -38,3 +38,5 @@
 - 명령 추가: `command/commandHandler.ts` 또는 `command/commands/` 하위 모듈에 핸들러 추가 (레지스트리 패턴 준비됨)
 - 시스템 추가: `World` 생성자 또는 주입 옵션 + Tick 순서 (추후 파이프라인화 검토)
 - 상세 이슈·재설계: [DESIGN_REFACTOR.md](DESIGN_REFACTOR.md)
+- 이벤트 사용 정책: [EVENT_POLICY.md](EVENT_POLICY.md)
+- 다음 작업 목록: [updates/NEXT.md](updates/NEXT.md)

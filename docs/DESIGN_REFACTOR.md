@@ -32,10 +32,9 @@
 
 ### 2.3 이벤트 이원화
 
-- **EventLoop vs EventBus**:  
-  - EventLoop: `emit` → 큐 적재, `tick()`에서 타입별 핸들러 실행. 서버의 `AsyncRequest`만 사용.  
-  - EventBus: 구독/발행, Tick·시스템 이벤트 등 대부분 로직.  
-  마이그레이션 경로가 문서에 없고, 둘 다 사용되며 역할이 중복될 수 있음.
+- **EventLoop vs EventBus**: 정책·역할 정리는 [EVENT_POLICY.md](EVENT_POLICY.md) 참고.  
+  - EventLoop: 서버 AsyncRequest 전달용(레거시).  
+  - EventBus: 시뮬레이션 이벤트 주 사용처.
 
 ### 2.4 문서/일치
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import { WorldSession } from './worldSession.js';
 import { handlePostCommand } from './routes/postCommand.js';
+import { handleGetScience } from './routes/getScience.js';
 import { handleGetStatus } from './routes/getStatus.js';
 import { handlePostTick } from './routes/postTick.js';
 import { handleGetLatestSnapshot } from './routes/getLatestSnapshot.js';
@@ -15,6 +16,8 @@ export const createRouter = (session: WorldSession): express.Router => {
     });
 
     router.post('/command', handlePostCommand(session));
+    router.get('/science', handleGetScience(session));
+    router.post('/science', handleGetScience(session));
     router.get('/status/:id?', handleGetStatus(session));
     router.post('/tick', handlePostTick(session));
     router.get('/snapshot/latest', handleGetLatestSnapshot(session));

@@ -263,18 +263,11 @@ npm start -- --mode server
   { "cmd": "spawn_entity ga Wolf" }
   ```
 
-### 4.3 로컬 LLM(선택)
-- 기본값은 **LLM 비활성(조용히 무시)** 입니다. AI 기능을 쓰려면 OpenAI 호환 로컬 서버를 띄우고 아래 환경변수를 설정하세요.
-  - `.env` / `.env.example`에 기본 템플릿이 포함되어 있습니다.
-  - 활성화하려면 `AETHERIUS_LLM_ENABLED=1` 로 바꾸세요.
-  - `AETHERIUS_LLM_BASE_URL` (예: `http://localhost:1234/v1`)
-  - 혼용 추천(멀티 에이전트/코드 이해 최적화)
-    - `AETHERIUS_LLM_MODEL_CHAT` (예: `llama-3.1-8b-instruct`)
-    - `AETHERIUS_LLM_MODEL_CODE` (예: `qwen2.5-coder-7b-instruct` 또는 `qwen2.5-coder-14b-instruct`)
-    - `AETHERIUS_LLM_MODEL_JSON` (예: `llama-3.1-8b-instruct`)
-  - 단일 모델만 쓰면 `AETHERIUS_LLM_MODEL`만 설정해도 됩니다.
-  - `AETHERIUS_LLM_API_KEY` (로컬이면 아무 값이나 가능)
-- LLM을 켜는 기능
+### 4.3 Gemini API(선택)
+- AI 기능은 **Google Gemini API**를 사용합니다. `.env`에 `GEMINI_API_KEY`를 넣으면 연동됩니다. 없으면 AI 기능은 무음 처리(빈 응답)됩니다.
+  - `.env.example` 참고. API 키는 [Aetherius-Secrets](https://github.com/endlessGold/Aetherius-Secrets) 또는 로컬 `.env`에만 보관합니다.
+  - (선택) `GEMINI_MODEL=gemini-1.5-flash` — 기본값은 `gemini-1.5-flash`입니다.
+- 사용하는 기능
   - `auto_god on` (AI God 개입)
   - `ai_events on` (AI 이벤트 오케스트레이터)
   - `ask_science <query>` (과학자 리포트)

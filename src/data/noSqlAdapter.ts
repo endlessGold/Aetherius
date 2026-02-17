@@ -54,6 +54,9 @@ export interface NoSqlAdapter {
   
   // Experiment Management
   saveExperimentMetadata(meta: ExperimentMetadata): Promise<void>;
+
+  /** 해당 월드의 저장된 월드 이벤트 개수 (실험 검증용) */
+  getWorldEventCount(worldId: string): Promise<number>;
 }
 
 export class InMemoryNoSqlAdapter implements NoSqlAdapter {
@@ -81,6 +84,10 @@ export class InMemoryNoSqlAdapter implements NoSqlAdapter {
 
   async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
     this.experiments.set(meta.id, meta);
+  }
+
+  async getWorldEventCount(worldId: string): Promise<number> {
+    return this.eventHistory.filter((e) => e.worldId === worldId).length;
   }
 }
 
@@ -152,6 +159,12 @@ export class MongoNoSqlAdapter implements NoSqlAdapter {
     const col = client.db(this.dbName).collection('experiments');
     await col.updateOne({ id: meta.id }, { $set: meta }, { upsert: true });
   }
+
+  async getWorldEventCount(worldId: string): Promise<number> {
+    if (!this.client) await this.getCollection();
+    const col = this.client!.db(this.dbName).collection('world_events');
+    return col.countDocuments({ worldId });
+  }
 }
 
 export class RedisNoSqlAdapter implements NoSqlAdapter {
@@ -208,5 +221,10 @@ export class RedisNoSqlAdapter implements NoSqlAdapter {
   async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
     const client = await this.getClient();
     await client.set(`aetherius:experiment:${meta.id}`, JSON.stringify(meta));
+  }
+
+  async getWorldEventCount(worldId: string): Promise<number> {
+    const client = await this.getClient();
+    return client.lLen(`aetherius:world:${worldId}:events`);
   }
 }

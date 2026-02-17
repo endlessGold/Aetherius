@@ -40,6 +40,11 @@ export class Persistence {
   async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
     await this.adapter.saveExperimentMetadata(meta);
   }
+
+  /** 해당 월드에 저장된 월드 이벤트 개수 (실험 검증용) */
+  async getWorldEventCount(worldId: string): Promise<number> {
+    return this.adapter.getWorldEventCount(worldId);
+  }
 }
 
 export function createPersistenceFromEnv(): Persistence {

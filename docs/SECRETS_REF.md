@@ -2,7 +2,7 @@
 
 API 키·비밀은 **Aetherius-Secrets** 저장소에서 관리하며, 개발모드에서만 사용한다.
 
-- 저장소: https://github.com/endlessGold/Aetherius-Secrets  
+- 저장소: https://github.com/endlessGold/Aetherius-Secrets
 - 이 프로젝트의 `.env`는 커밋하지 않는다. 값은 위 저장소 또는 로컬 `.env`에만 둔다.
 
 ## Aetherius-Secrets에 올릴 항목
@@ -11,11 +11,15 @@ API 키·비밀은 **Aetherius-Secrets** 저장소에서 관리하며, 개발모
 
 | 변수명 | 용도 |
 |--------|------|
-| `GEMINI_API_KEY` | Gemini API (개발·AI 기능) |
-| `AETHERIUS_LLM_API_KEY` | LLM API (선택) |
-| `AETHERIUS_LLM_BASE_URL` | LLM 엔드포인트 (선택) |
+| `GEMINI_API_KEY` | Gemini API (AI 기능: ask_science, auto_god, ai_events) |
 | `AETHERIUS_AUTH_SECRET` | JWT 서명 (배포 시) |
 | `AETHERIUS_AUTH_USERNAME` / `AETHERIUS_AUTH_PASSWORD` | API 인증 (배포 시) |
+| `AETHERIUS_NOSQL_DRIVER` | DB 드라이버: `inmemory` \| `mongodb` \| `redis` |
+| `AETHERIUS_MONGODB_URI` | MongoDB 연결 문자열 (무료: [MongoDB Atlas](https://www.mongodb.com/atlas)) |
+| `AETHERIUS_MONGODB_DB` | MongoDB DB 이름 (기본 `aetherius`) |
+| `AETHERIUS_REDIS_URL` | Redis 연결 URL (무료: [Upstash](https://upstash.com)) |
+
+상세 설정은 [무료 DB 호스팅 안내](DB_HOSTING.md) 참고.
 
 ## 업로드 방법 (Aetherius-Secrets에 반영)
 

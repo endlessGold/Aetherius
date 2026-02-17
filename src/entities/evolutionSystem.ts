@@ -124,7 +124,8 @@ export class EvolutionSystem {
     offspringAgg?: OffspringAgg
   ): void {
     const c = agent.components;
-    
+    if (!state.genome?.stats) return;
+
     this.ensureLineage(state);
     state.physiology.energy = c.energy.energy;
     state.position.x = c.position.x;
@@ -215,6 +216,7 @@ export class EvolutionSystem {
   ): void {
     const c = agent.components;
     const s = c.goalGA!;
+    if (!s.genome?.stats) return;
     const prng = new PRNG(hashStringToSeed(`${world.id}:${agent.id}:${world.tickCount}`));
 
     const speed = s.genome.stats.speed;

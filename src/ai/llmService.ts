@@ -1,11 +1,11 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai';
 
 export interface LLMService {
   generateResponse(prompt: string, context?: string): Promise<string>;
-  generateDecision(prompt: string, schema: any): Promise<any>;
+  generateDecision(prompt: string, schema: unknown): Promise<unknown>;
 }
 
-function safeJsonParse(text: string): any | null {
+function safeJsonParse(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
@@ -20,132 +20,61 @@ function safeJsonParse(text: string): any | null {
   }
 }
 
-export class LocalOpenAIService implements LLMService {
-  private model: string;
-  private client: OpenAI;
-  private isAvailable: boolean = true;
-  private ready: Promise<void>;
-  private explicitBaseURL: boolean;
-  private enabled: boolean;
+/**
+ * Gemini API 기반 LLM 서비스.
+ * .env의 GEMINI_API_KEY를 사용한다. 없으면 AI 기능은 무음 처리(빈 응답/ null 반환).
+ */
+export class GeminiLLMService implements LLMService {
+  private model: GenerativeModel | null = null;
+  private modelName: string;
 
   constructor(modelName?: string) {
-    this.explicitBaseURL = Boolean(process.env.AETHERIUS_LLM_BASE_URL);
-    this.enabled = process.env.AETHERIUS_LLM_ENABLED === '1';
-    const baseURL = process.env.AETHERIUS_LLM_BASE_URL || 'http://localhost:1234/v1';
-    const apiKey = process.env.AETHERIUS_LLM_API_KEY || 'local';
-    this.model = modelName || process.env.AETHERIUS_LLM_MODEL || 'local-model';
-    this.client = new OpenAI({ apiKey, baseURL });
-    this.isAvailable = this.enabled;
-    this.ready = this.enabled ? this.checkAvailability() : Promise.resolve();
+    this.modelName = modelName || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    if (apiKey) {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      this.model = genAI.getGenerativeModel({
+        model: this.modelName,
+        generationConfig: {
+          temperature: 0.6,
+          maxOutputTokens: 8192,
+        },
+      });
+    }
   }
 
-  private async checkAvailability() {
+  private async generate(prompt: string, systemInstruction?: string, temperature = 0.6): Promise<string> {
+    if (!this.model) return 'The spirits are silent...';
+
     try {
-      const list = await this.client.models.list();
-      const models = list.data?.map((m) => m.id) ?? [];
-      if (models.length > 0 && !models.includes(this.model)) {
-        this.model = models[0];
-      }
-      this.isAvailable = true;
-    } catch {
-      this.isAvailable = false;
-      if (this.explicitBaseURL) {
-        console.warn(`⚠️ [LLM] Local OpenAI-compatible server not detected at AETHERIUS_LLM_BASE_URL. AI features will be silent.`);
-      }
+      const fullPrompt = systemInstruction
+        ? `${systemInstruction}\n\n---\n\n${prompt}`
+        : prompt;
+      const result = await this.model.generateContent(fullPrompt);
+      return (result.response as { text(): string }).text().trim();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return `Error invoking Gemini: ${msg}`;
     }
   }
 
   async generateResponse(prompt: string, context?: string): Promise<string> {
-    await this.ready;
-    if (!this.isAvailable) return 'The spirits are silent...';
-
-    try {
-      const response = await this.client.chat.completions.create({
-        model: this.model,
-        temperature: 0.6,
-        messages: [
-          { role: 'system', content: context || 'You are a simulation assistant.' },
-          { role: 'user', content: prompt }
-        ]
-      });
-      return response.choices?.[0]?.message?.content || '';
-    } catch (error) {
-      const msg = (error as any)?.message || 'Unknown LLM error';
-      return `Error invoking local LLM: ${msg}`;
-    }
+    return this.generate(prompt, context || 'You are a simulation assistant.');
   }
 
-  async generateDecision(prompt: string, schema: any): Promise<any> {
-    await this.ready;
-    if (!this.isAvailable) return null;
+  async generateDecision(prompt: string, _schema: unknown): Promise<unknown> {
+    if (!this.model) return null;
 
-    const system = 'You are an AI controller for a simulation. Output ONLY valid JSON (no markdown).';
+    const system = 'You are an AI controller for a simulation. Output ONLY valid JSON (no markdown, no code block).';
     try {
-      const response = await this.client.chat.completions.create({
-        model: this.model,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: prompt }
-        ],
-        response_format: { type: 'json_object' } as any
-      });
-      const text = response.choices?.[0]?.message?.content || '';
+      const text = await this.generate(prompt, system, 0.2);
       return safeJsonParse(text);
     } catch {
-      try {
-        const response = await this.client.chat.completions.create({
-          model: this.model,
-          temperature: 0.2,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: prompt }
-          ]
-        });
-        const text = response.choices?.[0]?.message?.content || '';
-        return safeJsonParse(text);
-      } catch {
-        return null;
-      }
+      return null;
     }
-  }
-}
-
-export class MultiModelLLMService implements LLMService {
-  private chat: LocalOpenAIService;
-  private code: LocalOpenAIService;
-  private json: LocalOpenAIService;
-
-  constructor(options?: { chatModel?: string; codeModel?: string; jsonModel?: string }) {
-    const fallback = process.env.AETHERIUS_LLM_MODEL || 'local-model';
-    const chatModel = options?.chatModel || process.env.AETHERIUS_LLM_MODEL_CHAT || fallback;
-    const codeModel = options?.codeModel || process.env.AETHERIUS_LLM_MODEL_CODE || fallback;
-    const jsonModel = options?.jsonModel || process.env.AETHERIUS_LLM_MODEL_JSON || chatModel;
-
-    this.chat = new LocalOpenAIService(chatModel);
-    this.code = new LocalOpenAIService(codeModel);
-    this.json = new LocalOpenAIService(jsonModel);
-  }
-
-  async generateResponse(prompt: string, context?: string): Promise<string> {
-    const ctx = (context || '').toLowerCase();
-    const codeLike =
-      ctx.includes('codebase') ||
-      ctx.includes('typescript') ||
-      ctx.includes('implement') ||
-      ctx.includes('implementation') ||
-      ctx.includes('debug') ||
-      ctx.includes('patch') ||
-      ctx.includes('compile') ||
-      ctx.includes('refactor');
-    return (codeLike ? this.code : this.chat).generateResponse(prompt, context);
-  }
-
-  async generateDecision(prompt: string, schema: any): Promise<any> {
-    return this.json.generateDecision(prompt, schema);
   }
 }
 
 export function createDefaultLLMService(): LLMService {
-  return new MultiModelLLMService();
+  return new GeminiLLMService();
 }

@@ -53,6 +53,7 @@ export class Server {
     this.app.listen(this.port, () => {
       console.log(`🌍 Aetherius Server running on http://localhost:${this.port}`);
       console.log(`   - POST /api/command { "cmd": "..." }`);
+      console.log(`   - GET /api/science?q=질문  또는  POST /api/science { "query": "질문" }`);
       console.log(`   - GET /api/status`);
     });
   }

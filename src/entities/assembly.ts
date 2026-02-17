@@ -164,13 +164,17 @@ export class AssembleManager implements INode<{}, INode<any, any>> {
 
   update(): void {
     for (const node of this.children) {
-      node.update();
+      if (typeof (node as { update?: () => void }).update === 'function') {
+        (node as { update: () => void }).update();
+      }
     }
   }
 
   listenUpdate(context: UpdateContext) {
     for (const node of this.children) {
-      node.listenUpdate(context);
+      if (typeof (node as { listenUpdate?: (ctx: UpdateContext) => void }).listenUpdate === 'function') {
+        (node as { listenUpdate: (ctx: UpdateContext) => void }).listenUpdate(context);
+      }
     }
   }
   // Create Entity + Create Node + Inject Components + Register Actions + Connect

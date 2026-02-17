@@ -22,7 +22,17 @@ export class CommandHandler {
   constructor(world: World, weatherEntity: unknown) {
     this.world = world;
     this.weatherEntity = weatherEntity;
-    this.scienceOrchestrator = new ScienceOrchestrator();
+    this.scienceOrchestrator = new ScienceOrchestrator({
+      recordExperimentEvent: async (payload) => {
+        await this.world.persistence.saveWorldEvent({
+          worldId: this.world.id,
+          tick: this.world.tickCount,
+          type: 'OTHER',
+          location: { x: 0, y: 0 },
+          details: JSON.stringify(payload)
+        });
+      }
+    });
 
     this.world.eventBus.subscribe(System.ChangeWeather, (event) => {
       const weatherBehavior = (this.weatherEntity as { children?: Array<{ components?: { weather?: Record<string, unknown> } }> })?.children?.[0];
