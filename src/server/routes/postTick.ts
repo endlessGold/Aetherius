@@ -5,7 +5,7 @@ export const handlePostTick = (session: WorldSession) => async (req: Request, re
     const count = req.body.count || 1;
     
     try {
-        const result = await session.enqueueRequest('tick', { count });
+        const result = await session.tickNow(count);
         res.json(result);
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });

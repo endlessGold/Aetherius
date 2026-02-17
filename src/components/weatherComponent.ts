@@ -1,4 +1,5 @@
-import { Component, Event } from '../core/interfaces.js';
+import { ComponentBase, Event } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
 
 export interface WeatherState {
   condition: 'Sunny' | 'Rainy' | 'Stormy' | 'Cloudy' | 'Drought';
@@ -10,13 +11,12 @@ export interface WeatherState {
   precipitation: number;    // mm/day
 }
 
-export class WeatherComponent implements Component {
+export class WeatherComponent extends ComponentBase<WeatherState> {
   name = 'Weather';
-  state: WeatherState;
 
   constructor() {
     // Default starting weather
-    this.state = {
+    super({
       condition: 'Sunny',
       temperature: 25,
       humidity: 50,
@@ -24,18 +24,18 @@ export class WeatherComponent implements Component {
       co2Level: 400,
       sunlightIntensity: 100,
       precipitation: 0
-    };
+    });
   }
 
   handleEvent(event: Event): void {
     // 1. Handle External Weather Change Events
-    if (event.type === 'ChangeWeather') {
+    if (event instanceof System.ChangeWeather) {
       this.updateWeather(event.payload);
       console.log(`[Weather] Changed to ${this.state.condition}, Temp: ${this.state.temperature}°C, Rain: ${this.state.precipitation}mm`);
     }
 
     // 2. Dynamic Fluctuations on Tick (Optional)
-    if (event.type === 'Tick') {
+    if (event instanceof System.Tick) {
       // Small random fluctuations could be added here
       // e.g., temperature varies by time of day if we had time
     }
@@ -43,7 +43,7 @@ export class WeatherComponent implements Component {
 
   private updateWeather(payload: Partial<WeatherState>) {
     Object.assign(this.state, payload);
-    
+
     // Auto-adjust derived values based on condition if not explicitly provided
     switch (this.state.condition) {
       case 'Sunny':

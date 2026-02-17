@@ -1,17 +1,8 @@
 import { World } from '../core/world.js';
-import { Event } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
 
 // 비동기 요청을 Tick 루프에 안전하게 전달하기 위한 래퍼 이벤트
-export interface AsyncRequestEvent extends Event {
-    type: 'AsyncRequest';
-    payload: {
-        requestId: string;
-        action: string;
-        params: any;
-        resolve: (value: any) => void;
-        reject: (reason: any) => void;
-    };
-}
+export type AsyncRequestEvent = System.AsyncRequest;
 
 export class WorldSession {
     public world: World;
@@ -28,9 +19,9 @@ export class WorldSession {
         if (this.isRunning) return;
         this.isRunning = true;
         this.tickIntervalMs = intervalMs;
-        
+
         console.log(`[WorldSession] Starting tick loop for world ${this.world.id} (${intervalMs}ms)`);
-        
+
         this.tickTimer = setInterval(() => {
             void this.processTick();
         }, this.tickIntervalMs);
@@ -49,23 +40,33 @@ export class WorldSession {
     // 핵심: API 요청을 이벤트 큐에 넣고 Promise 반환 (비동기 대기)
     enqueueRequest(action: string, params: any): Promise<any> {
         return new Promise((resolve, reject) => {
-            const event: AsyncRequestEvent = {
-                type: 'AsyncRequest',
-                timestamp: Date.now(),
-                payload: {
-                    requestId: `req-${Date.now()}-${Math.random()}`,
-                    action,
-                    params,
-                    resolve,
-                    reject
-                }
-            };
-            
+            const event = new System.AsyncRequest({
+                requestId: `req-${Date.now()}-${Math.random()}`,
+                action,
+                params,
+                resolve,
+                reject
+            });
+
             // World의 EventLoop에 등록
-            // 주의: World의 EventLoop는 단순히 emit만 하므로, 
+            // 주의: World의 EventLoop는 단순히 emit만 하므로,
             // 이를 처리할 핸들러가 등록되어 있어야 함.
             this.world.eventLoop.emit(event);
         });
+    }
+
+    async tickNow(count: number = 1): Promise<any> {
+        const n = Math.max(1, Number(count || 1));
+        if (this.isTicking) return { success: false, message: 'World is currently ticking.' };
+        this.isTicking = true;
+        try {
+            for (let i = 0; i < n; i++) {
+                await this.world.tick();
+            }
+            return { success: true, message: `Advanced ${n} ticks. (worldTick=${this.world.tickCount})` };
+        } finally {
+            this.isTicking = false;
+        }
     }
 
     private async processTick(): Promise<void> {

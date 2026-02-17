@@ -1,27 +1,28 @@
+import 'dotenv/config';
 import { World } from './core/world.js';
-import { createEntityByAssemblyWithManager, assembleManager } from './entities/catalog.js';
+import { createEntityByAssemblyWithManager } from './entities/catalog.js';
 import { AssembleManager } from './entities/assembly.js';
+import { EvolutionSystem } from './entities/evolutionSystem.js';
+import { EcosystemCycleSystem } from './entities/ecosystemCycleSystem.js';
 import { CommandHandler } from './interface/commandHandler.js';
 import { CLI } from './interface/cli.js';
 import { Server } from './interface/server.js';
 import { WeatherData } from './components/entityData.js';
+import { universeRegistry } from './core/space/universeRegistry.js';
 
-const assembleManagers = new WeakMap<World, AssembleManager>();
+function assemble(world: World, manager: AssembleManager) {
+  const evolutionSystem = new EvolutionSystem();
+  const ecosystemSystem = new EcosystemCycleSystem();
 
-function registerAssembleManager(world: World, manager: AssembleManager) {
-  assembleManagers.set(world, manager);
-}
+  (world as any).ecosystemSystem = ecosystemSystem;
 
-function assemble(world: World) {
-  const manager = assembleManagers.get(world);
-  if (!manager) {
-    throw new Error(`AssembleManager not registered for world ${world.id}`);
-  }
   const originalTick = world.tick.bind(world);
   world.tick = async () => {
     await originalTick();
     manager.listenUpdate({ world, deltaTime: 1.0 });
     manager.update();
+    evolutionSystem.tick(manager, world);
+    await ecosystemSystem.tick(manager, world);
 
     if (world.tickCount % 60 === 0) {
       console.log(`\n--- Tick ${world.tickCount} Entity Status ---`);
@@ -38,6 +39,7 @@ function createWorldWithAssembly(worldId: string, weatherType: string, manager: 
   const weather = weatherComp.weather;
 
   const world = new World(worldId, {
+    assembleManager: manager,
     tickPayloadProvider: () => ({
       environment: {
         soilMoisture:
@@ -56,8 +58,7 @@ function createWorldWithAssembly(worldId: string, weatherType: string, manager: 
     })
   });
 
-  registerAssembleManager(world, manager);
-  assemble(world);
+  assemble(world, manager);
 
   return { world, weatherEntity, manager };
 }
@@ -78,14 +79,21 @@ async function main() {
   const worlds = worldIds.map((id, index) => {
     const manager = new AssembleManager();
     const weatherType = weatherTypes[index % weatherTypes.length];
-    return createWorldWithAssembly(id, weatherType, manager);
+    const created = createWorldWithAssembly(id, weatherType, manager);
+    universeRegistry.registerWorld({ worldId: created.world.id, world: created.world, manager: created.manager });
+    return created;
   });
   const { world, weatherEntity } = worlds[0];
 
 
   // Pre-seed some entities for testing
   worlds.forEach(({ world, manager }) => {
-    // Basic Ecosystem
+    // Basic Ecosystem - Use generated types from catalog (which are now dynamically named but we can access them via legacy keys or get all types)
+    // To ensure we use the new procedural names, let's get keys from the catalog that match our pattern or just pick some.
+    // However, createEntityByAssemblyWithManager requires exact keys.
+    // In catalog.ts we registered BOTH 'Plant_Species_001' AND the generated name.
+    // So 'Plant_Species_001' will still work but it will point to a factory that creates an entity with a UNIQUE GENERATED NAME in its component identity.
+
     createEntityByAssemblyWithManager(manager, 'Plant_Species_001', `${world.id}_Plant_A`);
     createEntityByAssemblyWithManager(manager, 'Creature_Type_001', `${world.id}_Creature_A`);
 
@@ -118,6 +126,11 @@ async function main() {
   } else {
     // CLI Mode (Default)
     const cli = new CLI(commandHandler);
+
+    // Auto-warp for experiment
+    console.log("\n🧪 EXPERIMENTAL MODE: Auto-Warping 200 ticks to seed evolution data...");
+    await commandHandler.execute('warp_evolution 200');
+
     cli.start();
   }
 }

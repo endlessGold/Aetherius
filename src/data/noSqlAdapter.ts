@@ -14,15 +14,50 @@ export interface TickSnapshot {
   predictions?: Record<string, any>;
 }
 
+export interface EvolutionStats {
+  worldId: string;
+  generation: number;
+  tick: number;
+  avgFitness: number;
+  weights: { survive: number; grow: number; explore: number };
+  populationCount: number;
+}
+
+export interface WorldEvent {
+  worldId: string;
+  tick: number;
+  type: 'WILDFIRE' | 'FLOOD' | 'HUNT' | 'OTHER';
+  location: { x: number; y: number };
+  details: string;
+}
+
+export interface ExperimentMetadata {
+  id: string;
+  config: Record<string, any>;
+  startedAt: number;
+  endedAt?: number;
+  totalGenerations: number;
+}
+
 export interface NoSqlAdapter {
   driver: NoSqlDriver;
   saveTickSnapshot(snapshot: TickSnapshot): Promise<void>;
   getLatestSnapshot(worldId: string): Promise<TickSnapshot | null>;
+  
+  // Extended Evolution Support
+  saveEvolutionStats(stats: EvolutionStats): Promise<void>;
+  saveWorldEvent(event: WorldEvent): Promise<void>;
+  
+  // Experiment Management
+  saveExperimentMetadata(meta: ExperimentMetadata): Promise<void>;
 }
 
 export class InMemoryNoSqlAdapter implements NoSqlAdapter {
   driver: NoSqlDriver = 'inmemory';
   private latestByWorld: Map<string, TickSnapshot> = new Map();
+  private evolutionHistory: EvolutionStats[] = [];
+  private eventHistory: WorldEvent[] = [];
+  private experiments: Map<string, ExperimentMetadata> = new Map();
 
   async saveTickSnapshot(snapshot: TickSnapshot): Promise<void> {
     this.latestByWorld.set(snapshot.worldId, snapshot);
@@ -30,6 +65,18 @@ export class InMemoryNoSqlAdapter implements NoSqlAdapter {
 
   async getLatestSnapshot(worldId: string): Promise<TickSnapshot | null> {
     return this.latestByWorld.get(worldId) ?? null;
+  }
+
+  async saveEvolutionStats(stats: EvolutionStats): Promise<void> {
+    this.evolutionHistory.push(stats);
+  }
+
+  async saveWorldEvent(event: WorldEvent): Promise<void> {
+    this.eventHistory.push(event);
+  }
+
+  async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
+    this.experiments.set(meta.id, meta);
   }
 }
 
@@ -71,6 +118,39 @@ export class MongoNoSqlAdapter implements NoSqlAdapter {
     const doc = await col.findOne({ worldId }, { sort: { tick: -1 } });
     return (doc as TickSnapshot | null) ?? null;
   }
+
+  async saveEvolutionStats(stats: EvolutionStats): Promise<void> {
+    const db = (await this.getCollection()).dbName; // Reuse connection
+    const client = this.client;
+    const col = client.db(this.dbName).collection('evolution_history');
+    
+    // Lazy index creation (could be optimized)
+    if (!this.client._indexesCreated) {
+       await col.createIndex({ worldId: 1, generation: 1 });
+       this.client._indexesCreated = true;
+    }
+
+    await col.updateOne(
+        { worldId: stats.worldId, generation: stats.generation },
+        { $set: stats },
+        { upsert: true }
+    );
+  }
+
+  async saveWorldEvent(event: WorldEvent): Promise<void> {
+    const client = this.client;
+    if (!client) await this.getCollection(); // Ensure connected
+    
+    const col = this.client.db(this.dbName).collection('world_events');
+    await col.insertOne(event);
+  }
+
+  async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
+    const client = this.client;
+    if (!client) await this.getCollection();
+    const col = client.db(this.dbName).collection('experiments');
+    await col.updateOne({ id: meta.id }, { $set: meta }, { upsert: true });
+  }
 }
 
 export class RedisNoSqlAdapter implements NoSqlAdapter {
@@ -108,6 +188,25 @@ export class RedisNoSqlAdapter implements NoSqlAdapter {
     const raw = await client.get(tickKey);
     if (!raw) return null;
     return JSON.parse(raw) as TickSnapshot;
+  }
+
+  async saveEvolutionStats(stats: EvolutionStats): Promise<void> {
+    const client = await this.getClient();
+    const key = `aetherius:world:${stats.worldId}:evolution:${stats.generation}`;
+    await client.set(key, JSON.stringify(stats));
+    // Add to a list for history
+    await client.rPush(`aetherius:world:${stats.worldId}:evolution_list`, JSON.stringify(stats));
+  }
+
+  async saveWorldEvent(event: WorldEvent): Promise<void> {
+    const client = await this.getClient();
+    // Use a stream or list for events
+    await client.rPush(`aetherius:world:${event.worldId}:events`, JSON.stringify(event));
+  }
+
+  async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
+    const client = await this.getClient();
+    await client.set(`aetherius:experiment:${meta.id}`, JSON.stringify(meta));
   }
 }
 

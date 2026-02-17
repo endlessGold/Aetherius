@@ -16,6 +16,10 @@ export class Node implements NodeInterface {
     this.components.set(component.name, component);
   }
 
+  getComponent(name: string): Component | undefined {
+    return this.components.get(name);
+  }
+
   handleEvent(event: Event): void {
     // 1. Handle event in components
     this.components.forEach((comp) => {
@@ -32,7 +36,19 @@ export class Node implements NodeInterface {
 }
 
 export class Entity extends Node {
+  constructor(id: string, type: string = 'Entity') {
+    super(id, type);
+  }
+}
+
+export class EmptyNode extends Node {
   constructor(id: string) {
-    super(id, 'Entity');
+    super(id, 'EmptyNode');
+  }
+}
+
+export class EventNode extends Node {
+  constructor(id: string) {
+    super(id, 'EventNode');
   }
 }

@@ -1,10 +1,13 @@
 import {
+  EvolutionStats,
+  ExperimentMetadata,
   InMemoryNoSqlAdapter,
   MongoNoSqlAdapter,
   NoSqlAdapter,
   NoSqlDriver,
   RedisNoSqlAdapter,
-  TickSnapshot
+  TickSnapshot,
+  WorldEvent
 } from './noSqlAdapter.js';
 
 export class Persistence {
@@ -24,6 +27,18 @@ export class Persistence {
 
   async getLatestSnapshot(worldId: string): Promise<TickSnapshot | null> {
     return this.adapter.getLatestSnapshot(worldId);
+  }
+
+  async saveEvolutionStats(stats: EvolutionStats): Promise<void> {
+    await this.adapter.saveEvolutionStats(stats);
+  }
+
+  async saveWorldEvent(event: WorldEvent): Promise<void> {
+    await this.adapter.saveWorldEvent(event);
+  }
+
+  async saveExperimentMetadata(meta: ExperimentMetadata): Promise<void> {
+    await this.adapter.saveExperimentMetadata(meta);
   }
 }
 

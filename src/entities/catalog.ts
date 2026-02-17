@@ -1,6 +1,7 @@
 import { Entity, AssembleManager } from './assembly.js';
-import { PlantEntity, CreatureEntity, WeatherEntity, PlantBehavior, CreatureBehavior, WeatherBehavior } from './behaviors.js';
-import { PlantData, CreatureData, WeatherData } from '../components/entityData.js';
+import { PlantEntity, CreatureEntity, WeatherEntity, DroneEntity, CorpseEntity, PlantBehavior, CreatureBehavior, WeatherBehavior, DroneBehavior, CorpseBehavior } from './behaviors.js';
+import { PlantData, CreatureData, WeatherData, DroneData, CorpseData } from '../components/entityData.js';
+import { NameGenerator } from '../ai/nameGenerator.js';
 
 // Global AssembleManager instance
 export const assembleManager = AssembleManager.getInstance();
@@ -19,11 +20,34 @@ function pad3(i: number): string {
 
 function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
     const m = new Map<string, FactoryFn>();
+    const nameGen = new NameGenerator(999);
+    const generatedNames = new Set<string>();
+
+    const getUniqueName = (generator: () => string): string => {
+        let name = generator();
+        let attempts = 0;
+        while (generatedNames.has(name) && attempts < 10) {
+            name = generator();
+            attempts++;
+        }
+        if (generatedNames.has(name)) {
+            name = `${name}_${pad3(generatedNames.size)}`;
+        }
+        generatedNames.add(name);
+        return name;
+    };
 
     range(60).forEach((i) => {
-        const key = `Plant_Species_${pad3(i)}`;
+        const speciesName = getUniqueName(() => nameGen.generatePlantName());
+        // We use the generated name as the key, but also keep a legacy-style key or alias if needed
+        // For now, let's just use the generated name as the primary key.
+        // But main.ts asks for 'Plant_Species_001', so we need to maintain compatibility or update main.ts
+        // Let's register BOTH keys to be safe.
+        const legacyKey = `Plant_Species_${pad3(i)}`;
+
         const rate = 0.3 + (i % 10) * 0.05;
-        m.set(key, (id) =>
+
+        const factory: FactoryFn = (id) =>
             manager.createEntity(
                 PlantEntity,
                 id,
@@ -32,8 +56,23 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                     NodeClass: PlantBehavior,
                     components: {
                         identity: {
-                            speciesName: key
+                            speciesName: speciesName
                         },
+                        classification: {
+                            category: 'Biotic',
+                            subtype: 'Plant',
+                            material: { organicFraction: 0.9, inorganicFraction: 0.05, waterFraction: 0.05 },
+                            tags: ['multicellular', 'producer']
+                        },
+                        lifeStage: { level: 'Multicellular', complexity: 0.6, trophicRole: 'Producer' },
+                        taxonomy: {
+                            domain: 'Eukaryote',
+                            kingdom: 'Plantae',
+                            clade: 'ProceduralPlant',
+                            speciesId: legacyKey,
+                            compatibilityKey: `Plantae:${legacyKey}`
+                        },
+                        disease: { status: 'S', load: 0, immunity: 0.2, incubationTicks: 0 },
                         growth: {
                             growthRateBase: rate,
                             stage: 'seed'
@@ -50,15 +89,23 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                         }
                     } as PlantData
                 }]
-            )
-        );
+            );
+
+        m.set(legacyKey, factory);
+        m.set(speciesName, factory);
     });
 
     range(40).forEach((i) => {
-        const key = `Creature_Type_${pad3(i)}`;
+        const speciesName = getUniqueName(() => nameGen.generateCreatureName());
+        const legacyKey = `Creature_Type_${pad3(i)}`;
+
         const x = (i * 13) % 100;
         const y = (i * 7) % 100;
-        m.set(key, (id) =>
+
+        // Randomize initial stats slightly
+        const energyEfficiency = 0.3 + Math.random() * 0.1;
+
+        const factory: FactoryFn = (id) =>
             manager.createEntity(
                 CreatureEntity,
                 id,
@@ -67,6 +114,21 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                     NodeClass: CreatureBehavior,
                     components: {
                         position: { x, y },
+                        classification: {
+                            category: 'Biotic',
+                            subtype: 'Creature',
+                            material: { organicFraction: 0.85, inorganicFraction: 0.05, waterFraction: 0.1 },
+                            tags: ['multicellular', 'consumer']
+                        },
+                        lifeStage: { level: 'Multicellular', complexity: 0.7, trophicRole: 'Consumer' },
+                        taxonomy: {
+                            domain: 'Eukaryote',
+                            kingdom: 'Animalia',
+                            clade: 'ProceduralCreature',
+                            speciesId: legacyKey,
+                            compatibilityKey: `Animalia:${legacyKey}`
+                        },
+                        disease: { status: 'S', load: 0, immunity: 0.15, incubationTicks: 0 },
                         vitality: {
                             hp: 100
                         },
@@ -75,11 +137,28 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                         },
                         age: {
                             age: 0
+                        },
+                        goalGA: {
+                            genome: {
+                                weights: {
+                                    survive: 0.3 + Math.random() * 0.1,
+                                    grow: 0.3 + Math.random() * 0.1,
+                                    explore: 0.3 + Math.random() * 0.1
+                                },
+                                mutationRate: 0.05
+                            },
+                            purpose: { kind: 'Survive', target: 1 },
+                            physiology: { energy: 100, hydration: 100 },
+                            growth: { biomass: 0 },
+                            position: { x, y },
+                            metrics: { ageTicks: 0, fitness: 0, purposeAchievement: 0, lastAction: 'Init' }
                         }
                     } as CreatureData
                 }]
-            )
-        );
+            );
+
+        m.set(legacyKey, factory);
+        m.set(speciesName, factory);
     });
 
     const weatherPresets: Array<WeatherData['weather'] & { name: string }> = [
@@ -130,6 +209,21 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                     NodeClass: CreatureBehavior,
                     components: {
                         position: { x: 0, y: 0 },
+                        classification: {
+                            category: 'Biotic',
+                            subtype: 'Microbe',
+                            material: { organicFraction: 0.6, inorganicFraction: 0.1, waterFraction: 0.3 },
+                            tags: ['cellular', 'microbial', 'decomposer']
+                        },
+                        lifeStage: { level: 'Microbe', complexity: 0.15, trophicRole: 'Decomposer' },
+                        taxonomy: {
+                            domain: 'Prokaryote',
+                            kingdom: 'Microbe',
+                            clade: 'ProceduralMicrobe',
+                            speciesId: key,
+                            compatibilityKey: `Microbe:${key}`
+                        },
+                        disease: { status: 'S', load: 0, immunity: 0.05, incubationTicks: 0 },
                         vitality: {
                             hp: 10
                         },
@@ -144,6 +238,50 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
             )
         );
     });
+
+    m.set('Drone_Observer_001', (id) =>
+        manager.createEntity(
+            DroneEntity,
+            id,
+            [],
+            [{
+                NodeClass: DroneBehavior,
+                components: {
+                    identity: { owner: 'Scientist', role: 'Observer' },
+                    position: { x: Math.random() * 100, y: Math.random() * 100 },
+                    energy: { energy: 100 },
+                    mission: { mode: 'survey' },
+                    camera: { intervalTicks: 20, radius: 10, lastShotTick: 0 },
+                    intervention: { intervalTicks: 30, lastTick: 0, enabled: false }
+                } as DroneData
+            }]
+        )
+    );
+
+    m.set('Corpse_Organic_001', (id) =>
+        manager.createEntity(
+            CorpseEntity,
+            id,
+            [],
+            [{
+                NodeClass: CorpseBehavior,
+                components: {
+                    classification: {
+                        category: 'Hybrid',
+                        subtype: 'Corpse',
+                        material: { organicFraction: 0.8, inorganicFraction: 0.05, waterFraction: 0.15 },
+                        tags: ['detritus']
+                    },
+                    position: { x: 0, y: 0 },
+                    biomass: 10,
+                    nutrients: { n: 1, p: 0.5, k: 0.5, organicMatter: 5 },
+                    pathogenLoad: 0,
+                    decayStage: 0,
+                    createdTick: 0
+                } as CorpseData
+            }]
+        )
+    );
 
     return m;
 }

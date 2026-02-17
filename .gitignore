@@ -16,3 +16,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Local runtime artifacts
+.trae/
+data/
+datasets/
+models/

@@ -3,6 +3,7 @@
 // ======================================================
 
 import { World } from '../core/world.js';
+import { NodePool } from '../core/nodePool.js';
 
 // ECS-Style Node/Entity/Behavior + AssembleManager
 // - Node: Hierarchy, holds components
@@ -71,11 +72,13 @@ export abstract class Node<C extends object, TChild extends INode<any, any> = IN
 // ---------------------- BehaviorNode ----------------------
 
 export abstract class BehaviorNode<C extends object> extends Node<C> {
+  public id: string = ''; // Add id property to match Node usage in logs
   private updateListeners: ((components: C) => void)[] = [];
   private contextListeners = new Map<SystemEvent, ((components: C, context: UpdateContext) => void)[]>();
 
   constructor(components: C) {
     super(components);
+    // id will be assigned by AssembleManager or Node constructor if modified
     this.updateHandler = () => {
       for (const listener of this.updateListeners) {
         listener(this.components);
@@ -145,6 +148,16 @@ export class AssembleManager implements INode<{}, INode<any, any>> {
     this.children.push(node);
   }
 
+  // Alias for compatibility with old code or specific use cases
+  registerEntity(entity: any): void {
+    if (entity instanceof Entity) {
+      this.entities.push(entity);
+      this.registerNode(entity);
+    } else {
+      this.registerNode(entity);
+    }
+  }
+
   addChild(child: INode<any, any>): void {
     this.registerNode(child);
   }
@@ -172,16 +185,73 @@ export class AssembleManager implements INode<{}, INode<any, any>> {
       args?: any[]
     }[] = []
   ): T {
-    const entity = new EntityClass(id, ...entityArgs);
+    const pool = NodePool.getInstance();
+
+    const entity = pool.acquire<T>(
+      EntityClass.name,
+      () => new EntityClass(id, ...entityArgs),
+      (e) => {
+        e.id = id;
+        e.children = [];
+      }
+    );
     this.registerNode(entity);
+
     for (const cfg of nodeConfigs) {
       const node = new cfg.NodeClass(cfg.components, ...(cfg.args || []));
+      node.id = entity.id;
+
       if (cfg.configure) cfg.configure(node);
       entity.addChild(node);
       this.registerNode(node);
     }
     this.entities.push(entity);
     return entity;
+  }
+
+  releaseEntity(entity: Entity<any>) {
+    const pool = NodePool.getInstance();
+
+    for (const child of entity.children) {
+      this.nodeSet.delete(child);
+      const childIdx = this.children.indexOf(child);
+      if (childIdx !== -1) this.children.splice(childIdx, 1);
+    }
+
+    entity.children = [];
+    pool.release(entity.constructor.name, entity);
+
+    const idx = this.entities.indexOf(entity);
+    if (idx !== -1) this.entities.splice(idx, 1);
+
+    this.nodeSet.delete(entity);
+    const entityIdx = this.children.indexOf(entity);
+    if (entityIdx !== -1) this.children.splice(entityIdx, 1);
+  }
+
+  detachEntity(entity: Entity<any>) {
+    for (const child of entity.children) {
+      this.nodeSet.delete(child);
+      const childIdx = this.children.indexOf(child);
+      if (childIdx !== -1) this.children.splice(childIdx, 1);
+    }
+
+    const idx = this.entities.indexOf(entity);
+    if (idx !== -1) this.entities.splice(idx, 1);
+
+    this.nodeSet.delete(entity);
+    const entityIdx = this.children.indexOf(entity);
+    if (entityIdx !== -1) this.children.splice(entityIdx, 1);
+  }
+
+  attachEntity(entity: Entity<any>) {
+    this.registerNode(entity);
+    for (const child of entity.children) {
+      this.registerNode(child);
+    }
+    if (!this.entities.includes(entity)) {
+      this.entities.push(entity);
+    }
   }
 
   // Helper to find entity by ID

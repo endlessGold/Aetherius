@@ -1,6 +1,6 @@
 # Aetherius Simulation Engine (에테리우스 시뮬레이션 엔진)
 
-**Aetherius**는 고해상도 자연 현상과 생물학적 상호작용을 정밀하게 모사하기 위한 TypeScript 기반의 시뮬레이션 엔진입니다.  
+**Aetherius**는 고해상도 자연 현상과 생물학적 상호작용을 정밀하게 모사하기 위한 TypeScript 기반의 시뮬레이션 엔진입니다.
 단순한 게임 로직을 넘어, 물리적 확산(Diffusion), 이류(Advection), 그리고 리비히의 최소량의 법칙(Liebig's Law)에 기반한 식물 성장 모델을 포함합니다.
 
 ---
@@ -130,11 +130,11 @@ export function absorbWater(node: BehaviorNode<PlantData>, context: UpdateContex
 export class PlantBehavior extends BehaviorNode<PlantData> {
     constructor(components: PlantData) {
         super(components);
-        
+
         // 함수 조립 (Composition)
         this.use(photosynthesis);
         this.use(absorbWater);
-        
+
         // 필요 시 고유 로직 추가 가능
         this.on(SystemEvent.ListenUpdate, (c, ctx) => { /* ... */ });
     }
@@ -157,6 +157,39 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
 ---
 
 ## 4. 설치 및 실행 (Installation & Usage)
+
+### 4.1 로컬 LLM(선택)
+- 기본값은 **LLM 비활성(조용히 무시)** 입니다. AI 기능을 쓰려면 OpenAI 호환 로컬 서버를 띄우고 아래 환경변수를 설정하세요.
+  - `.env` / `.env.example`에 기본 템플릿이 포함되어 있습니다.
+  - 활성화하려면 `AETHERIUS_LLM_ENABLED=1` 로 바꾸세요.
+  - `AETHERIUS_LLM_BASE_URL` (예: `http://localhost:1234/v1`)
+  - 혼용 추천(멀티 에이전트/코드 이해 최적화)
+    - `AETHERIUS_LLM_MODEL_CHAT` (예: `llama-3.1-8b-instruct`)
+    - `AETHERIUS_LLM_MODEL_CODE` (예: `qwen2.5-coder-7b-instruct` 또는 `qwen2.5-coder-14b-instruct`)
+    - `AETHERIUS_LLM_MODEL_JSON` (예: `llama-3.1-8b-instruct`)
+  - 단일 모델만 쓰면 `AETHERIUS_LLM_MODEL`만 설정해도 됩니다.
+  - `AETHERIUS_LLM_API_KEY` (로컬이면 아무 값이나 가능)
+- LLM을 켜는 기능
+  - `auto_god on` (AI God 개입)
+  - `ai_events on` (AI 이벤트 오케스트레이터)
+  - `ask_science <query>` (과학자 리포트)
+
+### 4.2 Vercel 배포(헤드리스 API + 브라우저 로그인)
+- 이 레포는 Vercel의 Serverless Function(`/api/*`)로 헤드리스 백엔드를 호스팅할 수 있습니다.
+- 브라우저 로그인/인증은 `/api/login` → Bearer 토큰 발급 → 이후 `/api/*` 호출 시 `Authorization: Bearer <token>`을 사용합니다.
+- 로컬 확인(빌드)
+  - `npm run build`
+- Vercel 환경변수(필수)
+  - `AETHERIUS_AUTH_USERNAME` (기본 `admin`)
+  - `AETHERIUS_AUTH_PASSWORD` (임의의 강한 비밀번호)
+  - `AETHERIUS_AUTH_SECRET` (긴 랜덤 문자열, JWT 서명 키)
+- 엔드포인트
+  - `POST /api/login` `{ "username": "...", "password": "..." }`
+  - `POST /api/tick` `{ "count": 1 }`
+  - `POST /api/command` `{ "cmd": "status" }`
+  - `GET /api/status?id=<entityId>`
+- 기본 콘솔 UI
+  - `/`(public/index.html)에서 로그인 후 tick/command를 바로 호출할 수 있습니다.
 
 ### 설치
 ```bash

@@ -1,5 +1,5 @@
 import { IEventBus, EventHandler } from '../events/eventBus.js';
-import { Simulation, EventCategory } from '../events/eventTypes.js';
+import { Simulation, EventCategory, EventCtor } from '../events/eventTypes.js';
 
 // 모든 시스템(System)의 기본 추상 클래스
 export abstract class BaseSystem {
@@ -21,7 +21,7 @@ export abstract class BaseSystem {
     }
 
     // 편의 메서드: 구독
-    protected subscribe(eventType: string, handler: EventHandler): void {
+    protected subscribe<T extends Simulation.Event>(eventType: EventCtor<T>, handler: EventHandler<T>): void {
         this.eventBus.subscribe(eventType, handler.bind(this));
     }
 }

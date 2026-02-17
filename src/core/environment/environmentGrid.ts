@@ -71,8 +71,8 @@ export class EnvironmentGrid {
   // Global (x, y) -> Chunk (cx, cy) + Local (lx, ly)
   private getLocation(x: number, y: number) {
     // Torus Topology (세계는 둥글다)
-    const gx = (x + this.width) % this.width;
-    const gy = (y + this.height) % this.height;
+    const gx = Math.floor((x + this.width) % this.width);
+    const gy = Math.floor((y + this.height) % this.height);
 
     const cx = Math.floor(gx / CHUNK_SIZE);
     const cy = Math.floor(gy / CHUNK_SIZE);

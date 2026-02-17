@@ -5,8 +5,18 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "start": "node --loader ts-node/esm src/main.ts",
     "start:server": "node --loader ts-node/esm src/main.ts --mode=server",
+    "start:cli": "node --loader ts-node/esm src/main.ts",
+    "start:dist": "node dist/main.js",
+    "start:dist:server": "node dist/main.js --mode=server",
+    "start:dist:cli": "node dist/main.js",
+    "science:smoke": "npm run build && node tools/science_smoke.js \"Aetherius: living maze + evolution tuning\"",
+    "wormhole:smoke": "npm run build && node tools/wormhole_smoke.js",
+    "drone:smoke": "npm run build && node tools/drone_smoke.js",
+    "ecosystem:smoke": "npm run build && node tools/ecosystem_smoke.js",
+    "dataset:cli": "node tools/run_headless.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,9 +25,12 @@
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
     "express": "^4.21.2",
+    "dotenv": "^16.4.7",
     "mongodb": "^6.14.1",
+    "openai": "^4.83.0",
     "puppeteer": "^24.37.3",
     "redis": "^4.7.0",
+    "jose": "^5.9.6",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
-import { Component, Event } from '../core/interfaces.js';
+import { ComponentBase, Event } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
 
 export interface PlantState {
   // 1. Basic Biological Properties
@@ -38,12 +39,11 @@ export interface PlantState {
   pestLoad: number;             // 0-1
 }
 
-export class PlantComponent implements Component {
+export class PlantComponent extends ComponentBase<PlantState> {
   name = 'Plant';
-  state: PlantState;
 
   constructor(speciesName: string, growthRate: number = 0.5) {
-    this.state = {
+    super({
       // Defaults
       speciesName,
       height: 0,
@@ -75,11 +75,11 @@ export class PlantComponent implements Component {
       frostStress: 0.0,
       diseaseLoad: 0.0,
       pestLoad: 0.0
-    };
+    });
   }
 
   handleEvent(event: Event): void {
-    if (event.type === 'Tick' && this.state.alive) {
+    if (event instanceof System.Tick && this.state.alive) {
       // Expect environment data in payload, or fallback to defaults
       const env = event.payload.environment || {
         soilMoisture: 50,
