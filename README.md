@@ -1,25 +1,50 @@
 # Aetherius Simulation Engine (에테리우스 시뮬레이션 엔진)
 
-**Aetherius**는 고해상도 자연 현상과 생물학적 상호작용을 정밀하게 모사하기 위한 TypeScript 기반의 시뮬레이션 엔진입니다.
-단순한 게임 로직을 넘어, 물리적 확산(Diffusion), 이류(Advection), 그리고 리비히의 최소량의 법칙(Liebig's Law)에 기반한 식물 성장 모델을 포함합니다.
+**Aetherius**는 몰입감 있는 “가상세계”를 만들기 위한 TypeScript 기반 시뮬레이션 엔진입니다.
+과학적 고증은 중요한 도구이지만 필수 제약은 아니며, 필요하면 타키온처럼 “가상의 모델/가설”을 심어서 실험적인 규칙과 세계관을 굴릴 수도 있습니다.
+현재 구현에는 환경 그리드(확산/이류), 생명/생태, 장소 네트워크, 멀티월드/웜홀, (선택) 로컬 LLM 기반 자동화가 포함됩니다.
+다만 고증이든 가설이든, 규칙은 관측/로그 가능한 상태 변수로 떨어지고 `World.tick()` 경계에서 재현 가능하게 동작하도록 설계합니다.
+핵심 컨셉은 한두 가지 규칙이 아니라, 각 도메인(물리/기후/생태/행동 등)마다 **정밀한 상태와 로직을 깊게 만들고**, 그것들이 Tick 위에서 서로 얽히도록 만드는 것입니다.
 
 ---
 
+## Quickstart
+```bash
+npm install
+npm start -- --mode cli
+```
+
+서버로 띄우려면:
+```bash
+npm start -- --mode server
+```
+
+## 이 프로젝트로 할 수 있는 것
+- **환경/물리(현재)**: 대규모 EnvironmentGrid(레이어) + 확산/이류 기반 업데이트
+- **기후/수문(현재/확장)**: 날씨/계절 엔티티 기반 강제력(forcing) → 환경 레이어에 반영(확장 가능)
+- **생명/생태(현재)**: 식물 성장, 크리처 행동/이동(Goal GA), 질병/사체/분해 사이클
+- **공간/네트워크(현재)**: 장소(Place) 네트워크로 이동 흔적을 그래프(노드/엣지)로 축적
+- **멀티월드/웜홀(현재)**: World 간 연결/이동 이벤트로 세계를 분할·연결
+- **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 AutoGod/과학자 리포트/이벤트 오케스트레이션
+
 ## 0. 한눈에 보는 설계 (Quick Design Overview)
 
-- **목표**: 외부 입력이 같으면 결과도 같은 결정론적 시뮬레이션을 유지하면서, 물리/생물 로직을 확장 가능하게 쌓습니다.
+- **목표**: 외부 입력이 같으면 결과도 같은 결정론적 시뮬레이션을 유지하면서, 물리/기후/생태/행동 등 도메인 로직을 확장 가능하게 쌓습니다.
 - **핵심 루프**: `World.tick()`이 시간의 단위이며, 환경 업데이트 → 개체(노드/컴포넌트) 업데이트 → 스냅샷 저장 흐름으로 진행됩니다.
-- **이벤트 중심**: CLI/REST 요청은 즉시 상태를 바꾸지 않고, 이벤트/요청 큐에 적재된 뒤 Tick 경계에서 처리됩니다.
-- **구성 방식**: 노드(Node)에 컴포넌트(Component)를 붙여 상태/반응을 분리하고, 시스템은 이벤트를 구독하는 리액터 형태로 동작합니다.
-- **실행 모드**: 같은 코드베이스로 CLI 모드와 웹 서버(Express REST API) 모드를 함께 지원합니다.
+- **이벤트 중심**: 시스템들은 `EventBus`를 구독하고, Tick 경계에서 이벤트 큐가 처리됩니다.
+- **구성 방식**: 월드는 환경(그리드) + 시스템(EventBus 구독) + 엔티티(AssembleManager/ECR/ECE)로 구성됩니다.
+- **멀티월드**: `UniverseRegistry`가 월드/매니저를 등록하고, 웜홀로 엔티티를 이동시킬 수 있습니다.
+- **실행 모드**: 로컬 CLI/서버(Express) + Vercel(Serverless API + 브라우저 로그인) 둘 다 지원합니다.
 
 ---
 
 ## 1. 프로젝트 비전 (Vision)
 
-- **과학적 정밀함 (Scientific Accuracy)**: 20개 이상의 환경 변수와 10억 개 이상의 파라미터(Environment Grid)를 처리할 수 있는 구조.
-- **확장성 (Scalability)**: CLI(로컬 테스트)와 웹 서버(원격 API) 모드를 동시에 지원하는 이중 아키텍처.
-- **결정론적 시뮬레이션 (Deterministic Simulation)**: 모든 상태 변경은 중앙 이벤트 루프(Event Loop)와 Tick 시스템을 통해서만 이루어짐.
+- **몰입감 (Immersion First)**: 플레이/관찰 관점에서 “그럴듯하게 느껴지는” 세계를 최우선 목표로 둡니다.
+- **고증/가설 혼용 (Grounded + Speculative)**: 검증된 과학 모델도 쓰지만, 세계관을 위해 가상의 법칙/가설을 주입해 실험할 수 있습니다.
+- **대규모 스케일 (Massive Scale)**: 20개 이상의 환경 변수와 10억+ 파라미터(Environment Grid)를 다룰 수 있는 구조.
+- **확장성 (Scalability)**: CLI(로컬 테스트)와 웹 서버/Serverless(원격 API) 모드를 동시에 지원.
+- **결정론/재현성 (Determinism)**: 외부 입력이 같으면 결과도 같도록, 상태 변화가 Tick 경계에서 정의되도록 설계.
 
 ---
 
@@ -28,7 +53,7 @@
 ### 2.1 이중 실행 모드 (Dual Execution Mode)
 단일 코드베이스(`main.ts`)에서 실행 인자에 따라 두 가지 모드로 작동합니다.
 - **CLI 모드 (`--mode cli`)**: 개발자 및 디버깅용 대화형 터미널.
-- **서버 모드 (`--mode server`)**: Express 기반 REST API 서버. 외부 요청을 비동기 이벤트 큐(Event Queue)에 등록하여 처리.
+- **서버 모드 (`--mode server`)**: Express 기반 REST API 서버. 명령(`/api/command`)은 Tick 경계에서 처리되며, tick(`/api/tick`)은 즉시 진행될 수 있습니다.
 
 ### 2.2 이벤트 기반 시스템 (Event-Driven System)
 모든 상호작용은 `EventBus`를 통해 발행(Publish) 및 구독(Subscribe) 됩니다.
@@ -39,19 +64,34 @@
   - `System.Event`: 틱(Tick), 데이터 저장 등.
   - `Command.Event`: 사용자 및 API 명령.
 
+**Tick 데이터 흐름(요약)**
+- 입력(CLI/HTTP) → Command 파싱 → 이벤트 발행/큐 적재 → `World.tick()` 경계에서 처리
+- `World.tick()` 내에서 대략적으로: 환경 그리드 업데이트 → 시스템 업데이트(센서/상호작용/생태계/웜홀 등) → 엔티티 업데이트(AssembleManager) → 이벤트 큐 처리 → 필요 시 스냅샷/로그 저장
+- 서버 모드에서:
+  - `/api/command`는 요청을 큐에 넣고 Tick에서 처리되는 경로를 사용
+  - `/api/tick`은 지정한 tick만큼 즉시 진행(재진입 방지 가드 포함)
+
 ### 2.3 환경 그리드 (Environment Grid)
 - **대규모 스케일 (Massive Scale)**: **10억 개(1 Billion)** 이상의 환경 파라미터를 실시간으로 시뮬레이션하는 것을 목표로 설계됨.
 - **TypedArray 최적화**: `Float32Array`와 `SharedArrayBuffer`를 사용하여 메모리 효율성과 연산 속도를 극대화.
 - **물리 엔진**: 확산(Diffusion) 및 이류(Advection) 알고리즘을 통해 열, 수분, 영양분의 자연스러운 이동을 시뮬레이션.
 
-### 2.4 생물학적 모델 (Biological Model)
-- **고급 식물 컴포넌트 (`PlantComponent`)**:
-  - 광합성 효율, 수분 스트레스, 영양분 흡수율 등 20+ 파라미터.
-  - 환경 요인(빛, 물, CO2)의 상호작용을 곱셈 방식(Multiplicative)으로 계산하여 리얼한 성장 곡선 구현.
+### 2.4 도메인 모델 (Domain Model)
+- 이 엔진은 특정 한 분야(예: 생물학)만 목표로 하지 않고, “가상세계”를 구성하는 여러 분야를 Tick 단위로 확장할 수 있게 구성합니다.
+- **환경/물리**: EnvironmentGrid 레이어(열/수분/영양 등)를 확산/이류로 갱신
+- **기후/계절**: Weather/Season 강제력이 레이어에 반영되도록 연결(현 구조는 확장 전제)
+- **생명/행동/생태**: 식물 성장, 크리처 행동/이동(Goal GA), 질병/사체/분해 사이클
+- **공간/네트워크**: Place/Maze 그래프 축적, 멀티월드/웜홀 이벤트로 세계 연결
+- **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 오케스트레이션
+
+### 2.5 멀티월드/공간 (Space)
+- `UniverseRegistry`에 여러 `World` + `AssembleManager`를 등록하고, 웜홀 시스템이 월드 간 이동을 발생시킵니다.
+- 핵심 개념: **월드마다 AssembleManager가 분리**되어, 엔티티가 섞이지 않습니다.
+- 웜홀은 “생성(열림) → TTL 만료(닫힘) → 이동(확률)” 같은 규칙으로 이벤트를 발생시키며, 시뮬레이션이 멀티월드로 확장될 수 있게 합니다.
 
 ---
 
-## 2.5 ECR/ECE 패턴
+## 2.6 ECR/ECE 패턴 (AssembleManager)
 
 이 프로젝트의 ECR/ECE는 전통적 ECS의 일괄 처리와 달리, 이벤트 중심으로 반응을 구성하는 하이브리드 구조입니다.
 
@@ -94,7 +134,7 @@ manager.listenUpdate({ world, deltaTime: 1.0 });
 manager.update();
 ```
 
-## 2.6 Behavior Function Pattern (동작 함수 패턴)
+## 2.7 Behavior Function Pattern (동작 함수 패턴)
 
 복잡한 행동 로직을 재사용 가능한 **전역 함수(Behavior Function)** 단위로 분리하여 조립하는 패턴입니다.
 `BehaviorNode`는 상태(Component)만 관리하고, 실제 로직은 `function`으로 위임하여 조합성(Composability)을 극대화합니다.
@@ -104,29 +144,47 @@ manager.update();
 - **명시적 매개변수**: `(node, context)`를 인자로 받아 상태에 접근.
 - **조합 가능**: `this.use(func)` 메서드로 여러 함수를 레고처럼 조립.
 
-### 예제 코드
+### 예제 코드(식물/크리처 공통 개념)
 
 **1. 전역 함수 정의**
 ```typescript
 import { BehaviorNode, UpdateContext } from './src/entities/assembly.js';
 
-// 광합성: 빛을 에너지로 변환
+type PlantData = {
+  energy: { energy: number };
+  vitality: { hp: number };
+};
+
+type CreatureData = {
+  energy?: { energy: number };
+};
+
+// 예시 1) 식물: 광합성(빛 → 에너지)
 export function photosynthesis(node: BehaviorNode<PlantData>, context: UpdateContext): void {
     const components = node.components;
-    // ... 로직 구현 ...
-    if (light > 50) components.energy.energy += 0.1;
+    const light = 80;
+    if (light > 50) components.energy.energy += 0.1 * context.deltaTime;
 }
 
-// 수분 흡수: 토양 수분을 체력으로 변환
+// 예시 2) 크리처: 에너지 소모(이동/행동 → 에너지 감소)
+export function spendEnergy(node: BehaviorNode<CreatureData>, context: UpdateContext): void {
+    const c = node.components;
+    const cost = 0.05 * context.deltaTime;
+    if (c.energy) c.energy.energy = Math.max(0, c.energy.energy - cost);
+}
+
+// 예시 3) 공통: 수분 흡수(토양 수분 → 체력/상태 변화)
 export function absorbWater(node: BehaviorNode<PlantData>, context: UpdateContext): void {
     const components = node.components;
-    // ... 로직 구현 ...
-    if (moisture > 20) components.vitality.hp += 0.1;
+    const moisture = 30;
+    if (moisture > 20) components.vitality.hp += 0.05 * context.deltaTime;
 }
 ```
 
 **2. 노드에서 조립**
 ```typescript
+import { BehaviorNode, SystemEvent } from './src/entities/assembly.js';
+
 export class PlantBehavior extends BehaviorNode<PlantData> {
     constructor(components: PlantData) {
         super(components);
@@ -139,6 +197,19 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
         this.on(SystemEvent.ListenUpdate, (c, ctx) => { /* ... */ });
     }
 }
+```
+
+## 2.8 디렉터리 구조 (Compact Layout)
+```text
+src/
+  core/         월드/이벤트/환경/시스템(physics, sensor, wormhole, maze 등)
+  entities/     AssembleManager 기반 엔티티 조립(plant/creature/weather/ecosystem)
+  interface/    CLI/Express 서버 엔트리(명령 처리 포함)
+  server/       REST 라우터/세션/비동기 요청 래퍼
+  ai/           로컬 LLM 어댑터 + Science/AI 오케스트레이터
+api/            (Vercel) 서버리스 엔드포인트 + JWT 인증
+public/         (Vercel) 브라우저 콘솔 UI
+tools/          smoke/헤드리스 실행 스크립트
 ```
 
 ---
@@ -158,7 +229,38 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
 
 ## 4. 설치 및 실행 (Installation & Usage)
 
-### 4.1 로컬 LLM(선택)
+### 4.1 설치
+```bash
+npm install
+```
+
+### 4.2 로컬 실행
+**CLI 모드**
+```bash
+npm start -- --mode cli
+```
+
+**서버 모드(Express)**
+```bash
+npm start -- --mode server
+```
+
+### API 예시 (서버 모드)
+- Express 서버 모드에서는 기본적으로 `/api/*`로 노출됩니다.
+- **상태 확인**: `GET /api/status` 또는 `GET /api/status/<id>`
+- **Tick 진행**: `POST /api/tick`
+  ```json
+  { "count": 1 }
+  ```
+- **명령 전송**: `POST /api/command`
+  ```json
+  { "cmd": "spawn_entity plant Rose" }
+  ```
+  ```json
+  { "cmd": "spawn_entity ga Wolf" }
+  ```
+
+### 4.3 로컬 LLM(선택)
 - 기본값은 **LLM 비활성(조용히 무시)** 입니다. AI 기능을 쓰려면 OpenAI 호환 로컬 서버를 띄우고 아래 환경변수를 설정하세요.
   - `.env` / `.env.example`에 기본 템플릿이 포함되어 있습니다.
   - 활성화하려면 `AETHERIUS_LLM_ENABLED=1` 로 바꾸세요.
@@ -174,11 +276,10 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
   - `ai_events on` (AI 이벤트 오케스트레이터)
   - `ask_science <query>` (과학자 리포트)
 
-### 4.2 Vercel 배포(헤드리스 API + 브라우저 로그인)
+### 4.4 Vercel 배포(헤드리스 API + 브라우저 로그인)
 - 이 레포는 Vercel의 Serverless Function(`/api/*`)로 헤드리스 백엔드를 호스팅할 수 있습니다.
 - 브라우저 로그인/인증은 `/api/login` → Bearer 토큰 발급 → 이후 `/api/*` 호출 시 `Authorization: Bearer <token>`을 사용합니다.
-- 로컬 확인(빌드)
-  - `npm run build`
+- 주의: Serverless는 인스턴스가 재시작되면 메모리 상태가 초기화될 수 있어, 월드 상태가 리셋될 수 있습니다. 장기 상태가 필요하면 별도 저장소(예: Redis/MongoDB)에 스냅샷을 저장하는 방식으로 확장합니다.
 - Vercel 환경변수(필수)
   - `AETHERIUS_AUTH_USERNAME` (기본 `admin`)
   - `AETHERIUS_AUTH_PASSWORD` (임의의 강한 비밀번호)
@@ -190,29 +291,6 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
   - `GET /api/status?id=<entityId>`
 - 기본 콘솔 UI
   - `/`(public/index.html)에서 로그인 후 tick/command를 바로 호출할 수 있습니다.
-
-### 설치
-```bash
-npm install
-```
-
-### 실행
-**CLI 모드 (기본값)**
-```bash
-npm start -- --mode cli
-```
-
-**서버 모드**
-```bash
-npm start -- --mode server
-```
-
-### API 예시 (Server Mode)
-- **상태 확인**: `GET /status`
-- **명령 전송**: `POST /command`
-  ```json
-  { "command": "spawn_entity plant Rose" }
-  ```
 
 ---
 
@@ -228,69 +306,10 @@ npm start -- --mode server
 
 ## 6. 핵심 개발 로드맵 (Core Development Roadmap)
 
-본 로드맵은 시뮬레이션 엔진의 **정밀도(Accuracy)**, **재현성(Reproducibility)**, **창발성(Emergence)**을 확보하기 위한 기술적 마일스톤에 집중합니다.
-사업적 활용 방안(상용화 또는 순수 연구)은 엔진의 기반이 완성된 후 결정될 예정입니다.
-자세한 3개년 계획은 [ROADMAP.md](ROADMAP.md)를 참조하십시오.
+README에는 현재 구현/사용법에 필요한 수준만 요약합니다. 자세한 로드맵은 [ROADMAP.md](ROADMAP.md)를 참조하세요.
 
-### **Phase 1: 기초 물리 및 환경 역학 (1~3개월)**
-*결정론적 환경 시뮬레이션의 수학적 모델 확립*
-
-**연구 목표**
-- **유체 역학(Fluid Dynamics)**: Navier-Stokes 방정식을 단순화한 격자 기반의 이류-확산(Advection-Diffusion) 모델 구현.
-- **열역학(Thermodynamics)**: 에너지 보존 법칙을 준수하는 열 전달 및 대기 순환 시스템 구축.
-- **수문학(Hydrology)**: 토양 수분 포화도, 침투, 증발산(Evapotranspiration)의 정량적 계산.
-
-**기술적 과제**
-- **부동소수점 결정론(Floating Point Determinism)**: IEEE 754 표준 준수 및 플랫폼 간 연산 결과의 완벽한 일치 보장.
-- **메모리 최적화**: 10억 개 이상의 셀(Cell) 처리를 위한 `SoA`(Structure of Arrays) 패턴 및 `TypedArray` 활용 극대화.
-
-**검증 지표**
-- 물리량(에너지, 질량) 보존 오차율 < 0.001%.
-- 단위 시간당 시뮬레이션 처리 속도(TPS) 안정화.
-
----
-
-### **Phase 2: 생물학적 복잡계 및 진화 (4~6개월)**
-*개체 단위의 생존 메커니즘과 집단 유전학의 구현*
-
-**연구 목표**
-- **유전 알고리즘(Genetic Algorithm)**: 염기서열 변이(Mutation), 교차(Crossover)를 통한 형질 유전 및 자연선택 시뮬레이션.
-- **표현형 가소성(Phenotypic Plasticity)**: 환경 스트레스(가뭄, 고온)에 따른 식물의 실시간 생리적 적응 반응 구현.
-- **생태학적 상호작용**: 종간 경쟁(Competition), 공생(Symbiosis), 기생(Parasitism) 모델링 및 로트카-볼테라(Lotka-Volterra) 방정식 검증.
-
-**기술적 과제**
-- **Entity Component System (ECS) 고도화**: 수십만 개체(Entity)의 병렬 처리를 위한 데이터 지향 설계(DOD).
-- **공간 분할(Spatial Partitioning)**: Quadtree/Octree를 활용한 충돌 감지 및 상호작용 검색 최적화.
-
-**검증 지표**
-- 섀넌 다양성 지수(Shannon Diversity Index)를 통한 생태계 건강성 측정.
-- 10,000세대 이상 장기 시뮬레이션 시 유전적 다양성 유지 여부.
-
----
-
-### **Phase 3: 거시적 창발성 및 데이터 분석 (7~12개월)**
-*대규모 환경에서의 창발적 현상 관측 및 학술적 가시화*
-
-**연구 목표**
-- **창발성(Emergence) 관측**: 단순한 규칙에서 발생하는 복잡한 패턴(군집 이동, 식생 군락 형성 등) 분석.
-- **기후 변화 시뮬레이션**: 외부 변수(CO2 농도, 일조량) 변화에 따른 생태계의 장기적 천이(Succession) 과정 연구.
-- **카오스 이론 검증**: 초기 조건의 미세한 차이가 결과에 미치는 나비 효과(Butterfly Effect) 정량화.
-
-**기술적 과제**
-- **GPGPU 가속**: WebGPU 또는 Compute Shader를 활용한 대규모 병렬 연산 처리.
-- **실시간 데이터 시각화**: 시뮬레이션 데이터의 실시간 히트맵, 그래프 렌더링 및 로깅 시스템 구축.
-
-**검증 지표**
-- 시뮬레이션 결과의 통계적 유의성 검증 (p-value).
-- 논문 작성을 위한 고해상도 데이터셋 추출 파이프라인 완성.
-
----
-
-### **학술적 기여 분야 (Interdisciplinary Contribution)**
-- **계산 생물학 (Computational Biology)**
-- **복잡계 물리학 (Complex Systems Physics)**
-- **인공 생명 (Artificial Life)**
-
----
+- **Phase 1 (환경 물리/결정론)**: 이류-확산 기반 환경 업데이트, 결정론/성능(대규모 그리드) 검증
+- **Phase 2 (생명/생태/진화)**: 크리처 행동/유전, 질병/사체/분해, 상호작용 확장 및 텔레메트리 강화
+- **Phase 3 (창발성/분석/시각화)**: 장기 시뮬레이션 관측 지표, 데이터셋 추출/분석/가시화 파이프라인
 
 *Copyright © 2026 EndlessGames. Licensed under the MIT License.*

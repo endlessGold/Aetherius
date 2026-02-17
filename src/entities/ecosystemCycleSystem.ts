@@ -3,7 +3,6 @@ import { World } from '../core/world.js';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
 import { createEntityByAssemblyWithManager } from './catalog.js';
 import { Biological, System, Interaction } from '../core/events/eventTypes.js';
-import { v4 as uuidv4 } from 'uuid';
 
 type SeasonState = {
   seasonIndex: number;
@@ -212,7 +211,7 @@ export class EcosystemCycleSystem {
       if (shouldAssign) {
         const urge = this.computeMigrationUrge(c, world);
         if (urge < 0.6) continue;
-        const target = this.pickMigrationTarget(c.position, network);
+        const target = this.pickMigrationTarget(c.position, network, world);
         if (!target) continue;
         this.migrationTargetByEntity.set(entity.id, { ...target, untilTick: world.tickCount + 200, reason: 'seasonal_migration' });
       }
@@ -245,25 +244,25 @@ export class EcosystemCycleSystem {
     return clamp01(0.35 * tempStress + 0.35 * waterStress + 0.15 * wander + 0.15 * (1 - social));
   }
 
-  private pickMigrationTarget(pos: { x: number; y: number }, network: any): { x: number; y: number; placeId?: string } | null {
+  private pickMigrationTarget(pos: { x: number; y: number }, network: any, world: World): { x: number; y: number; placeId?: string } | null {
     const current = network.getNearestNode(pos.x, pos.y, 15) || null;
     if (!current) {
       const rnd = Array.from(network.nodes.values()) as any[];
       if (rnd.length === 0) return null;
-      const n = rnd[Math.floor(Math.random() * rnd.length)] as any;
+      const n = rnd[world.randomInt(rnd.length)] as any;
       return { x: n.position.x, y: n.position.y, placeId: n.id };
     }
 
     const options = Array.from(current.maze.connections.keys());
-    if (options.length > 0 && Math.random() < 0.7) {
-      const toId = options[Math.floor(Math.random() * options.length)];
+    if (options.length > 0 && world.random01() < 0.7) {
+      const toId = options[world.randomInt(options.length)];
       const to = network.nodes.get(toId);
       if (to) return { x: to.position.x, y: to.position.y, placeId: to.id };
     }
 
     const all = (Array.from(network.nodes.values()) as any[]).filter((n: any) => n.id !== current.id);
     if (all.length === 0) return null;
-    const n = all[Math.floor(Math.random() * all.length)] as any;
+    const n = all[world.randomInt(all.length)] as any;
     return { x: n.position.x, y: n.position.y, placeId: n.id };
   }
 
@@ -315,11 +314,11 @@ export class EcosystemCycleSystem {
           picked = strain;
         }
 
-        if (picked && exposure > 0 && Math.random() < clamp01(exposure)) {
+        if (picked && exposure > 0 && world.random01() < clamp01(exposure)) {
           disease.status = 'E';
           disease.strainId = picked.id;
           disease.load = 0.1;
-          disease.incubationTicks = 10 + Math.floor(Math.random() * 20);
+          disease.incubationTicks = 10 + world.randomInt(20);
           disease.infectedAtTick = world.tickCount;
           world.eventBus.publish(new Biological.InfectionContracted(entity.id, picked.id, 'EcosystemCycleSystem'));
           await world.persistence.saveWorldEvent({
@@ -330,8 +329,8 @@ export class EcosystemCycleSystem {
             details: JSON.stringify({ kind: 'infection_contracted', entityId: entity.id, strainId: picked.id, tick: world.tickCount })
           });
 
-          if (Math.random() < picked.mutationRate) {
-            const mutated = this.mutateStrain(picked);
+          if (world.random01() < picked.mutationRate) {
+            const mutated = this.mutateStrain(world, picked);
             this.strains.set(mutated.id, mutated);
             world.eventBus.publish(new Biological.NewStrainDiscovered(mutated.id, this.summarizeStrain(mutated), picked.id, 'EcosystemCycleSystem'));
           }
@@ -354,7 +353,7 @@ export class EcosystemCycleSystem {
 
         if (c.vitality?.hp != null && c.vitality.hp <= 0) {
           world.eventBus.publish(new Biological.DiedOfDisease(entity.id, disease.strainId || 'Unknown', 'EcosystemCycleSystem'));
-        } else if (Math.random() < 0.02 + disease.immunity * 0.05) {
+        } else if (world.random01() < 0.02 + disease.immunity * 0.05) {
           disease.status = 'R';
           disease.load = 0;
           world.eventBus.publish(new Biological.Recovered(entity.id, disease.strainId || 'Unknown', 'EcosystemCycleSystem'));
@@ -370,9 +369,9 @@ export class EcosystemCycleSystem {
     return { transmissibility: s.transmissibility, lethality: s.lethality, mutationRate: s.mutationRate, host: s.hostCompatibilityKey };
   }
 
-  private mutateStrain(parent: DiseaseStrain): DiseaseStrain {
-    const id = `Strain_${Math.random().toString(36).slice(2, 8)}`;
-    const mutate = (v: number, amp: number) => Math.max(0, v + (Math.random() - 0.5) * amp);
+  private mutateStrain(world: World, parent: DiseaseStrain): DiseaseStrain {
+    const id = world.nextId('Strain');
+    const mutate = (v: number, amp: number) => Math.max(0, v + (world.random01() - 0.5) * amp);
     return {
       ...parent,
       id,
@@ -384,7 +383,7 @@ export class EcosystemCycleSystem {
 
   private async tickHybridization(manager: AssembleManager, world: World) {
     if (this.season.seasonIndex !== 0) return;
-    if (Math.random() > 0.15) return;
+    if (world.random01() > 0.15) return;
 
     const candidates = manager.entities.filter((e: any) => {
       const c = (e.children?.[0] as any)?.components;
@@ -397,7 +396,7 @@ export class EcosystemCycleSystem {
     });
 
     if (candidates.length < 2) return;
-    const a = candidates[Math.floor(Math.random() * candidates.length)];
+    const a = candidates[world.randomInt(candidates.length)];
     const ac = (a.children[0] as any).components;
     const neighbors = this.queryNeighbors(ac.position, 4).filter((e: any) => e.id !== a.id);
     const b = neighbors.find((e: any) => {
@@ -418,14 +417,14 @@ export class EcosystemCycleSystem {
     const healthB = clamp01((bc.vitality?.hp ?? 100) / 100);
     const diseasePenalty = clamp01((ac.disease?.load ?? 0) + (bc.disease?.load ?? 0));
     const probability = clamp01(base * healthA * healthB * (1 - 0.5 * diseasePenalty));
-    const success = Math.random() < probability;
+    const success = world.random01() < probability;
 
     world.eventBus.publish(new Interaction.InterspeciesMatingAttempted(a.id, b.id, probability, success, 'EcosystemCycleSystem'));
     if (!success) {
       return;
     }
 
-    const offspringId = `${world.id}_Hybrid_${uuidv4().slice(0, 8)}`;
+    const offspringId = world.nextId('Hybrid');
     const offspring = createEntityByAssemblyWithManager(manager, 'Creature_Type_001', offspringId);
     const oc = (offspring.children[0] as any).components;
 
@@ -479,7 +478,7 @@ export class EcosystemCycleSystem {
       const pathogenLoad = c.disease?.load ?? 0;
       world.eventBus.publish(new Biological.Death(entity.id, 'hp_zero', { x: pos.x, y: pos.y }, biomass, pathogenLoad, 'EcosystemCycleSystem'));
 
-      const corpseId = `${world.id}_Corpse_${uuidv4().slice(0, 8)}`;
+      const corpseId = world.nextId('Corpse');
       const corpse = createEntityByAssemblyWithManager(manager, 'Corpse_Organic_001', corpseId);
       const cc = (corpse.children[0] as any).components;
       cc.position.x = pos.x;
@@ -492,13 +491,13 @@ export class EcosystemCycleSystem {
       world.eventBus.publish(new Biological.CorpseCreated(corpseId, entity.id, { x: pos.x, y: pos.y }, 'EcosystemCycleSystem'));
       manager.releaseEntity(entity);
 
-      if (Math.random() < 0.25) {
-        const microbeId = `${world.id}_Microbe_${uuidv4().slice(0, 8)}`;
-        const microbeType = `Microbe_Type_${String(1 + Math.floor(Math.random() * 20)).padStart(3, '0')}`;
+      if (world.random01() < 0.25) {
+        const microbeId = world.nextId('Microbe');
+        const microbeType = `Microbe_Type_${String(1 + world.randomInt(20)).padStart(3, '0')}`;
         const microbe = createEntityByAssemblyWithManager(manager, microbeType, microbeId);
         const mc = (microbe.children[0] as any).components;
-        mc.position.x = Math.max(0, Math.min(100, pos.x + (Math.random() - 0.5) * 4));
-        mc.position.y = Math.max(0, Math.min(100, pos.y + (Math.random() - 0.5) * 4));
+        mc.position.x = Math.max(0, Math.min(100, pos.x + (world.random01() - 0.5) * 4));
+        mc.position.y = Math.max(0, Math.min(100, pos.y + (world.random01() - 0.5) * 4));
       }
 
       await world.persistence.saveWorldEvent({

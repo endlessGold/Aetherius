@@ -1,4 +1,5 @@
 import { EnvironmentGrid, EnvLayer } from './environmentGrid.js';
+import type { PRNG } from '../../ai/prng.js';
 
 export class NatureSystem {
   grid: EnvironmentGrid;
@@ -91,22 +92,23 @@ export class NatureSystem {
 
   // 초기 지형 생성 (Perlin Noise 대용 - 단순 랜덤/그라데이션)
   // 전체 월드가 아닌 초기 시작 지점(Starting Zone)만 생성
-  initializeWorld() {
+  initializeWorld(rng?: PRNG) {
     console.log("[NatureSystem] Initializing starting zone (1024x1024)...");
     const startSize = 1024;
+    const rand = () => (rng ? rng.nextFloat01() : Math.random());
     
     // 시작 지점 주변만 초기화
     for (let y = 0; y < startSize; y++) {
       for (let x = 0; x < startSize; x++) {
         // 기본 온도 20도 + 랜덤 변동
-        this.grid.set(x, y, EnvLayer.Temperature, 20 + Math.random() * 5);
+        this.grid.set(x, y, EnvLayer.Temperature, 20 + rand() * 5);
         // 습도 50%
-        this.grid.set(x, y, EnvLayer.Humidity, 0.5 + Math.random() * 0.2);
+        this.grid.set(x, y, EnvLayer.Humidity, 0.5 + rand() * 0.2);
         // 비옥도
         this.grid.set(x, y, EnvLayer.SoilNitrogen, 0.8);
         this.grid.set(x, y, EnvLayer.SoilMoisture, 0.4);
         // 추가 파라미터 초기화
-        this.grid.set(x, y, EnvLayer.PHLevel, 6.5 + Math.random());
+        this.grid.set(x, y, EnvLayer.PHLevel, 6.5 + rand());
         this.grid.set(x, y, EnvLayer.OrganicMatter, 0.3);
         this.grid.set(x, y, EnvLayer.GroundWaterLevel, 5.0); // 5m 깊이
         this.grid.set(x, y, EnvLayer.SoilSalinity, 0.01);

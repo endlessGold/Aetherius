@@ -1,16 +1,21 @@
 export * from './weatherComponent.js';
 export * from './plantComponent.js';
-export class SpeciesComponent {
+export * from './goalGaComponent.js';
+export * from './bioStateComponent.js';
+export * from './actionParamsComponent.js';
+import { ComponentBase } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
+export class SpeciesComponent extends ComponentBase {
     constructor(speciesName, initialPop, growthRate) {
-        this.name = 'Species';
-        this.state = {
+        super({
             speciesName,
             population: initialPop,
             growthRate
-        };
+        });
+        this.name = 'Species';
     }
     handleEvent(event) {
-        if (event.type === 'Tick') {
+        if (event instanceof System.Tick) {
             // Simple logistic growth or exponential for now
             // pop = pop * (1 + rate)
             const growth = Math.floor(this.state.population * this.state.growthRate);
@@ -20,5 +25,11 @@ export class SpeciesComponent {
                 this.state.population = 1000000;
             }
         }
+    }
+}
+export class BasicComponent extends ComponentBase {
+    constructor() {
+        super({});
+        this.name = 'Basic';
     }
 }

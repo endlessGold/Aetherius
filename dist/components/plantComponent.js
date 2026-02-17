@@ -1,7 +1,8 @@
-export class PlantComponent {
+import { ComponentBase } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
+export class PlantComponent extends ComponentBase {
     constructor(speciesName, growthRate = 0.5) {
-        this.name = 'Plant';
-        this.state = {
+        super({
             // Defaults
             speciesName,
             height: 0,
@@ -29,10 +30,11 @@ export class PlantComponent {
             frostStress: 0.0,
             diseaseLoad: 0.0,
             pestLoad: 0.0
-        };
+        });
+        this.name = 'Plant';
     }
     handleEvent(event) {
-        if (event.type === 'Tick' && this.state.alive) {
+        if (event instanceof System.Tick && this.state.alive) {
             // Expect environment data in payload, or fallback to defaults
             const env = event.payload.environment || {
                 soilMoisture: 50,

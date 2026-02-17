@@ -12,6 +12,10 @@ export interface TickSnapshot {
   timestamp: number;
   nodes: NodeSnapshot[];
   predictions?: Record<string, any>;
+  seed?: number;
+  rngState?: number;
+  config?: Record<string, any>;
+  entities?: any;
 }
 
 export interface EvolutionStats {
@@ -209,4 +213,3 @@ export class RedisNoSqlAdapter implements NoSqlAdapter {
     await client.set(`aetherius:experiment:${meta.id}`, JSON.stringify(meta));
   }
 }
-

@@ -77,14 +77,14 @@ export class EvolutionSystem {
       return agents;
   }
 
-  private spawnOffspring(manager: AssembleManager, parent: BehaviorNode<CreatureData>, state: GoalGAState): void {
+  private spawnOffspring(manager: AssembleManager, world: World, parent: BehaviorNode<CreatureData>, state: GoalGAState): void {
       const parentId = parent.id;
       state.lineage.offspringCount++;
-      const offspringId = `${parentId}_off_${state.lineage.offspringCount}_${manager.entities.length}`;
+      const offspringId = world.nextId(`${parentId}_off_${state.lineage.offspringCount}`);
       
       const childGenome = JSON.parse(JSON.stringify(state.genome)); 
-      const childX = parent.components.position.x + (Math.random() - 0.5) * 5;
-      const childY = parent.components.position.y + (Math.random() - 0.5) * 5;
+      const childX = parent.components.position.x + (world.random01() - 0.5) * 5;
+      const childY = parent.components.position.y + (world.random01() - 0.5) * 5;
       
       manager.createEntity(
           CreatureEntity,
@@ -142,7 +142,7 @@ export class EvolutionSystem {
     if (state.lineage.role === 'Progenitor') {
         const activeOffspringCount = offspringAgg?.count ?? 0;
         if (c.energy.energy > 80 && activeOffspringCount < 3) {
-            this.spawnOffspring(manager, agent, state);
+            this.spawnOffspring(manager, world, agent, state);
             c.energy.energy -= 30;
             state.physiology.energy = c.energy.energy;
         }

@@ -1,7 +1,6 @@
 import { World } from '../core/world.js';
 import { Entity } from '../core/node.js';
 import { createEntityByAssemblyWithManager } from '../entities/catalog.js';
-import { v4 as uuidv4 } from 'uuid';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
 import { Environment, System } from '../core/events/eventTypes.js';
 import { WeatherData } from '../components/entityData.js';
@@ -26,6 +25,14 @@ export class CommandHandler {
     this.world = world;
     this.weatherEntity = weatherEntity;
     this.scienceOrchestrator = new ScienceOrchestrator();
+
+    this.world.eventBus.subscribe(System.ChangeWeather, (event) => {
+      const weatherBehavior = this.weatherEntity?.children?.[0];
+      const components = weatherBehavior?.components as WeatherData | undefined;
+      const weather = components?.weather;
+      if (!weather) return;
+      Object.assign(weather, event.payload || {});
+    });
   }
 
   private getManager() {
@@ -154,7 +161,7 @@ export class CommandHandler {
 
   private handleSpawnEntity(args: string[]): CommandResult {
     const type = args[0]?.toLowerCase();
-    const name = args[1] || `Entity_${uuidv4().slice(0, 8)}`;
+    const name = args[1] || this.world.nextId('Entity');
 
     if (!type) {
       return { success: false, message: "Usage: spawn_entity <plant|ga|basic> [name]" };
@@ -182,39 +189,33 @@ export class CommandHandler {
     const key = args[0];
     const value = args[1];
 
-    // Access weather component from new Entity structure
-    const weatherBehavior = this.weatherEntity.children[0];
-    if (!weatherBehavior || !weatherBehavior.components) {
-      return { success: false, message: "Weather components not found." };
-    }
-    const components = weatherBehavior.components as WeatherData;
-    const weather = components.weather;
-
+    const payload: Record<string, any> = {};
     switch (key.toLowerCase()) {
       case 'condition':
-        weather.condition = value as any;
+        payload.condition = value;
         break;
       case 'temp':
       case 'temperature':
-        weather.temperature = parseFloat(value);
+        payload.temperature = parseFloat(value);
         break;
       case 'humidity':
-        weather.humidity = parseFloat(value);
+        payload.humidity = parseFloat(value);
         break;
       case 'rain':
-        weather.precipitation = parseFloat(value);
+        payload.precipitation = parseFloat(value);
         break;
       case 'wind':
-        weather.windSpeed = parseFloat(value);
+        payload.windSpeed = parseFloat(value);
         break;
       case 'co2':
-        weather.co2Level = parseFloat(value);
+        payload.co2Level = parseFloat(value);
         break;
       default:
         return { success: false, message: `Unknown environment parameter: ${key}` };
     }
 
-    return { success: true, message: `Environment '${key}' set to '${value}'.` };
+    this.world.eventBus.publish(new System.ChangeWeather(payload));
+    return { success: true, message: `Queued environment change: ${key}=${value} (applies on tick).` };
   }
 
   private handleStatus(args: string[]): CommandResult {
@@ -366,7 +367,7 @@ export class CommandHandler {
         // If moisture is extreme, non-aquatic things drown
         if (moisture > waterLevel) {
           // Check if they have 'Swim' gene? (Not implemented yet, so random chance)
-          if (Math.random() < 0.7) {
+          if (this.world.random01() < 0.7) {
             behavior.components.vitality.hp = 0;
             drownedCount++;
           }
@@ -380,7 +381,7 @@ export class CommandHandler {
     };
   }
 
-  private handleIceAge(args: string[]): CommandResult {
+  private handleIceAge(_args: string[]): CommandResult {
     let frozenCount = 0;
     this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvLayer.Temperature, -5, 'CommandHandler'));
 
@@ -388,7 +389,7 @@ export class CommandHandler {
       const behavior = entity.children[0] as any;
       if (behavior && behavior.components && behavior.components.vitality) {
         // Cold kills
-        if (Math.random() < 0.6) {
+        if (this.world.random01() < 0.6) {
           behavior.components.vitality.hp = 0;
           frozenCount++;
         }
@@ -709,7 +710,7 @@ export class CommandHandler {
     const handle = universeRegistry.getWorld(worldId);
     const manager = handle?.manager ?? this.getManager();
 
-    const id = `${worldId}_Drone_${uuidv4().slice(0, 8)}`;
+    const id = (handle?.world ?? this.world).nextId('Drone');
     const entity = createEntityByAssemblyWithManager(manager as any, 'Drone_Observer_001', id);
     const behavior = entity.children[0] as any;
     if (behavior?.components) {

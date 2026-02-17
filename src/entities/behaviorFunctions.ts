@@ -41,8 +41,8 @@ export function randomWalk(node: BehaviorNode<CreatureData>, context: UpdateCont
   const components = node.components;
 
   if (components.energy.energy > 10) {
-    components.position.x += (Math.random() - 0.5) * 2 * context.deltaTime;
-    components.position.y += (Math.random() - 0.5) * 2 * context.deltaTime;
+    components.position.x += (context.world.random01() - 0.5) * 2 * context.deltaTime;
+    components.position.y += (context.world.random01() - 0.5) * 2 * context.deltaTime;
   }
 }
 
@@ -76,7 +76,7 @@ export function wildfire(node: BehaviorNode<PlantData>, context: UpdateContext):
 
   // Ignition condition: High temp (>35) & Low moisture (<10)
   if (temp > 35 && moisture < 10) {
-    if (Math.random() < 0.01) { // 1% chance per tick to ignite
+    if (context.world.random01() < 0.01) {
       const details = `Plant ${node.id} caught fire at (${components.position.x.toFixed(1)}, ${components.position.y.toFixed(1)})`;
       console.log(`🔥 [WILDFIRE] ${details}`);
       components.vitality.hp -= 20 * context.deltaTime;
@@ -104,7 +104,7 @@ export function floodDamage(node: BehaviorNode<any>, context: UpdateContext): vo
   const moisture = context.world.environment.get(components.position.x, components.position.y, EnvLayer.SoilMoisture);
 
   if (moisture > 90 && components.vitality) {
-    if (Math.random() < 0.05) {
+    if (context.world.random01() < 0.05) {
       const details = `Entity ${node.id} is drowning at (${components.position.x.toFixed(1)}, ${components.position.y.toFixed(1)})`;
       console.log(`🌊 [FLOOD] ${details}`);
       components.vitality.hp -= 5 * context.deltaTime;
@@ -130,7 +130,7 @@ export function huntPrey(node: BehaviorNode<CreatureData>, context: UpdateContex
   // For now, we simulate hunting success randomly if energy is low
   const c = node.components;
   if (c.energy.energy < 30) {
-    if (Math.random() < 0.02) {
+    if (context.world.random01() < 0.02) {
       const details = `Predator ${node.id} caught prey!`;
       console.log(`🍖 [HUNT] ${details}`);
       c.energy.energy += 50;

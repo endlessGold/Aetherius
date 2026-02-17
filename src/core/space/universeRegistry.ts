@@ -60,10 +60,10 @@ export class UniverseRegistry {
     return null;
   }
 
-  pickRandomOtherWorldId(worldId: string): string | null {
+  pickRandomOtherWorldId(worldId: string, random01: () => number = Math.random): string | null {
     const ids = this.listWorldIds().filter(id => id !== worldId);
     if (ids.length === 0) return null;
-    return ids[Math.floor(Math.random() * ids.length)];
+    return ids[Math.floor(random01() * ids.length)];
   }
 
   findEntityAcrossWorlds(entityId: string): { worldId: string; manager: AssembleManager; entity: Entity<any> } | null {
@@ -88,4 +88,3 @@ export class UniverseRegistry {
 }
 
 export const universeRegistry = new UniverseRegistry();
-

@@ -1,7 +1,7 @@
 export const handlePostTick = (session) => async (req, res) => {
     const count = req.body.count || 1;
     try {
-        const result = await session.enqueueRequest('tick', { count });
+        const result = await session.tickNow(count);
         res.json(result);
     }
     catch (error) {

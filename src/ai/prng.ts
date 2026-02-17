@@ -23,6 +23,14 @@ export class PRNG {
     if (maxExclusive <= 0) return 0;
     return Math.floor(this.nextFloat01() * maxExclusive);
   }
+
+  getState(): number {
+    return this.state >>> 0;
+  }
+
+  setState(state: number): void {
+    this.state = (state >>> 0) || 0x6d2b79f5;
+  }
 }
 
 export function hashStringToSeed(input: string): number {
@@ -33,4 +41,3 @@ export function hashStringToSeed(input: string): number {
   }
   return h >>> 0;
 }
-

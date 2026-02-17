@@ -8,6 +8,9 @@ export class Node {
     addComponent(component) {
         this.components.set(component.name, component);
     }
+    getComponent(name) {
+        return this.components.get(name);
+    }
     handleEvent(event) {
         // 1. Handle event in components
         this.components.forEach((comp) => {
@@ -22,7 +25,17 @@ export class Node {
     }
 }
 export class Entity extends Node {
+    constructor(id, type = 'Entity') {
+        super(id, type);
+    }
+}
+export class EmptyNode extends Node {
     constructor(id) {
-        super(id, 'Entity');
+        super(id, 'EmptyNode');
+    }
+}
+export class EventNode extends Node {
+    constructor(id) {
+        super(id, 'EventNode');
     }
 }

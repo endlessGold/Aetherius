@@ -19,7 +19,7 @@ export class EventLoop {
         this.queue = []; // Clear queue for next tick additions
         for (const event of eventsToProcess) {
             // 1. Global registry handlers
-            const handler = this.registry.get(event.type);
+            const handler = this.registry.get(event.constructor);
             if (handler) {
                 handler(event);
             }

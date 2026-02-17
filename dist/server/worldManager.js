@@ -20,14 +20,14 @@ export class WorldManager {
         return Array.from(this.worlds.keys());
     }
     // Tick all worlds
-    tickAll() {
-        this.worlds.forEach(world => {
+    async tickAll() {
+        for (const world of this.worlds.values()) {
             try {
-                world.tick();
+                await world.tick();
             }
             catch (e) {
                 console.error(`[WorldManager] Error ticking world ${world.id}:`, e);
             }
-        });
+        }
     }
 }

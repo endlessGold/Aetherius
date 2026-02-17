@@ -137,7 +137,7 @@ export class MazeSystem {
         if (this.manager.entities.length === 0) return;
         
         for(let i=0; i<5; i++) {
-            const rnd = Math.floor(Math.random() * this.manager.entities.length);
+            const rnd = this.world.randomInt(this.manager.entities.length);
             const entity = this.manager.entities[rnd];
             
             // Skip Places
@@ -150,7 +150,7 @@ export class MazeSystem {
             
             const nearest = this.network.getNearestNode(pos.x, pos.y, 15);
             if (!nearest) {
-                if (Math.random() < 0.05) {
+                if (this.world.random01() < 0.05) {
                     const node = this.network.createNode(pos.x, pos.y);
                     console.log(`🏰 New Place Discovered: ${node.data.identity.name} at (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)})`);
                 }

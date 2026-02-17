@@ -1,8 +1,9 @@
-export class WeatherComponent {
+import { ComponentBase } from '../core/interfaces.js';
+import { System } from '../core/events/eventTypes.js';
+export class WeatherComponent extends ComponentBase {
     constructor() {
-        this.name = 'Weather';
         // Default starting weather
-        this.state = {
+        super({
             condition: 'Sunny',
             temperature: 25,
             humidity: 50,
@@ -10,16 +11,17 @@ export class WeatherComponent {
             co2Level: 400,
             sunlightIntensity: 100,
             precipitation: 0
-        };
+        });
+        this.name = 'Weather';
     }
     handleEvent(event) {
         // 1. Handle External Weather Change Events
-        if (event.type === 'ChangeWeather') {
+        if (event instanceof System.ChangeWeather) {
             this.updateWeather(event.payload);
             console.log(`[Weather] Changed to ${this.state.condition}, Temp: ${this.state.temperature}°C, Rain: ${this.state.precipitation}mm`);
         }
         // 2. Dynamic Fluctuations on Tick (Optional)
-        if (event.type === 'Tick') {
+        if (event instanceof System.Tick) {
             // Small random fluctuations could be added here
             // e.g., temperature varies by time of day if we had time
         }

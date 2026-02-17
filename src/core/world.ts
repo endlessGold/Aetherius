@@ -20,6 +20,8 @@ import { AIEventOrchestratorSystem } from './systems/aiEventOrchestratorSystem.j
 import { WormholeSystem } from './systems/wormholeSystem.js';
 import type { AssembleManager } from '../entities/assembly.js';
 import { AssembleManager as AssembleManagerClass } from '../entities/assembly.js';
+import { PRNG } from '../ai/prng.js';
+import { loadWorldConfig, WorldConfig } from './config/worldConfig.js';
 
 export class World {
   id: string;
@@ -30,7 +32,10 @@ export class World {
   persistence: Persistence;
   tfModel: TensorFlowModel;
   private tickPayloadProvider: () => Record<string, any>;
-  assembleManager?: AssembleManager;
+  assembleManager: AssembleManager;
+  config: WorldConfig;
+  rng: PRNG;
+  private idSeq: number = 0;
   private isTicking: boolean = false;
 
   // High-Resolution Simulation Components
@@ -48,19 +53,29 @@ export class World {
   aiEventOrchestratorSystem: AIEventOrchestratorSystem;
   wormholeSystem: WormholeSystem;
 
-  constructor(id: string, options?: { persistence?: Persistence; tickPayloadProvider?: () => Record<string, any>; assembleManager?: AssembleManager }) {
+  constructor(
+    id: string,
+    options?: {
+      persistence?: Persistence;
+      tickPayloadProvider?: () => Record<string, any>;
+      assembleManager?: AssembleManager;
+      config?: Partial<WorldConfig>;
+    }
+  ) {
     this.id = id;
+    this.config = loadWorldConfig(id, options?.config);
+    this.rng = new PRNG(this.config.seed);
     this.persistence = options?.persistence ?? createPersistenceFromEnv();
     this.tfModel = new TensorFlowModel();
     this.tickPayloadProvider = options?.tickPayloadProvider ?? (() => ({}));
-    this.assembleManager = options?.assembleManager;
+    this.assembleManager = options?.assembleManager ?? new AssembleManagerClass();
 
     // Create a massive world grid (7000x7000 default)
     // 21 layers * 49M cells ≈ 1 Billion parameters
     // Chunk system handles memory efficiently
     this.environment = new EnvironmentGrid();
     this.natureSystem = new NatureSystem(this.environment);
-    this.natureSystem.initializeWorld();
+    this.natureSystem.initializeWorld(this.rng);
     this.goalGASystem = new GoalGASystem();
     this.interactionSystem = new InteractionSystem(this);
     this.sensorSystem = new SensorSystem(this);
@@ -97,7 +112,20 @@ export class World {
   }
 
   getAssembleManager(): AssembleManager {
-    return this.assembleManager ?? AssembleManagerClass.getInstance();
+    return this.assembleManager;
+  }
+
+  nextId(prefix: string): string {
+    this.idSeq += 1;
+    return `${prefix}_${this.id}_${this.tickCount}_${this.idSeq}`;
+  }
+
+  random01(): number {
+    return this.rng.nextFloat01();
+  }
+
+  randomInt(maxExclusive: number): number {
+    return this.rng.nextInt(maxExclusive);
   }
 
   async tick(): Promise<void> {
@@ -117,7 +145,7 @@ export class World {
     await this.eventBus.processQueue();
 
     // 3. Simulate High-Res Physics
-    this.natureSystem.simulate(Date.now());
+    this.natureSystem.simulate(this.tickCount);
 
     // 4. Goal-generating GA tick
     this.goalGASystem.tick(this);
@@ -136,7 +164,8 @@ export class World {
       if (pred) predictions[node.id] = pred;
     }
 
-    const snapshot = this.buildSnapshot(Date.now(), Object.keys(predictions).length > 0 ? predictions : undefined);
+    const timestamp = this.config.deterministic ? this.tickCount * this.config.tickDurationMs : Date.now();
+    const snapshot = this.buildSnapshot(timestamp, Object.keys(predictions).length > 0 ? predictions : undefined);
     await this.persistence.saveTickSnapshot(snapshot);
     } finally {
       this.isTicking = false;
@@ -148,10 +177,28 @@ export class World {
     for (const node of this.nodes.values()) {
       const components: Record<string, any> = {};
       node.components.forEach((comp, key) => {
-        components[key] = comp.state;
+        components[key] = JSON.parse(JSON.stringify(comp.state));
       });
       nodes.push({ id: node.id, type: node.type, components });
     }
-    return { worldId: this.id, tick: this.tickCount, timestamp, nodes, predictions };
+    const entities = JSON.parse(
+      JSON.stringify(
+        this.assembleManager?.entities?.map((e: any) => ({
+          id: e.id,
+          children: (e.children || []).map((c: any) => ({ id: c.id || e.id, components: c.components }))
+        })) || []
+      )
+    );
+    return {
+      worldId: this.id,
+      tick: this.tickCount,
+      timestamp,
+      nodes,
+      predictions,
+      seed: this.config.seed,
+      rngState: this.rng.getState(),
+      config: this.config,
+      entities
+    };
   }
 }

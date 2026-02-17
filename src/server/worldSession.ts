@@ -41,7 +41,7 @@ export class WorldSession {
     enqueueRequest(action: string, params: any): Promise<any> {
         return new Promise((resolve, reject) => {
             const event = new System.AsyncRequest({
-                requestId: `req-${Date.now()}-${Math.random()}`,
+                requestId: this.world.nextId('req'),
                 action,
                 params,
                 resolve,

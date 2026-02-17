@@ -2,6 +2,7 @@ import { Entity, AssembleManager } from './assembly.js';
 import { PlantEntity, CreatureEntity, WeatherEntity, DroneEntity, CorpseEntity, PlantBehavior, CreatureBehavior, WeatherBehavior, DroneBehavior, CorpseBehavior } from './behaviors.js';
 import { PlantData, CreatureData, WeatherData, DroneData, CorpseData } from '../components/entityData.js';
 import { NameGenerator } from '../ai/nameGenerator.js';
+import { PRNG } from '../ai/prng.js';
 
 // Global AssembleManager instance
 export const assembleManager = AssembleManager.getInstance();
@@ -21,6 +22,7 @@ function pad3(i: number): string {
 function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
     const m = new Map<string, FactoryFn>();
     const nameGen = new NameGenerator(999);
+    const rng = new PRNG(999);
     const generatedNames = new Set<string>();
 
     const getUniqueName = (generator: () => string): string => {
@@ -102,9 +104,6 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
         const x = (i * 13) % 100;
         const y = (i * 7) % 100;
 
-        // Randomize initial stats slightly
-        const energyEfficiency = 0.3 + Math.random() * 0.1;
-
         const factory: FactoryFn = (id) =>
             manager.createEntity(
                 CreatureEntity,
@@ -141,9 +140,9 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                         goalGA: {
                             genome: {
                                 weights: {
-                                    survive: 0.3 + Math.random() * 0.1,
-                                    grow: 0.3 + Math.random() * 0.1,
-                                    explore: 0.3 + Math.random() * 0.1
+                                    survive: 0.3 + rng.nextFloat01() * 0.1,
+                                    grow: 0.3 + rng.nextFloat01() * 0.1,
+                                    explore: 0.3 + rng.nextFloat01() * 0.1
                                 },
                                 mutationRate: 0.05
                             },
@@ -248,7 +247,7 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                 NodeClass: DroneBehavior,
                 components: {
                     identity: { owner: 'Scientist', role: 'Observer' },
-                    position: { x: Math.random() * 100, y: Math.random() * 100 },
+                    position: { x: rng.nextFloat01() * 100, y: rng.nextFloat01() * 100 },
                     energy: { energy: 100 },
                     mission: { mode: 'survey' },
                     camera: { intervalTicks: 20, radius: 10, lastShotTick: 0 },

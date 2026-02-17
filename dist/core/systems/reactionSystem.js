@@ -1,12 +1,13 @@
 import { BaseSystem } from './baseSystem.js';
+import { Environment, Biological } from '../events/eventTypes.js';
 // 반응형 시스템 (Reaction System)
 // 특정 이벤트가 발생했을 때 연쇄 반응을 일으키는 로직을 담당
 export class ReactionSystem extends BaseSystem {
     registerHandlers() {
         // 예: 비(WeatherChange)가 내리면 -> 식물 성장 촉진 이벤트 발생?
         // 또는 특정 조건에서 화재 발생 등
-        this.subscribe('WeatherChange', this.handleWeatherChange);
-        this.subscribe('EntitySpawn', this.handleEntitySpawn);
+        this.subscribe(Environment.WeatherChange, this.handleWeatherChange);
+        this.subscribe(Biological.EntitySpawn, this.handleEntitySpawn);
     }
     handleWeatherChange(event) {
         // 비가 많이 오면 홍수 이벤트 발생 가능성 체크

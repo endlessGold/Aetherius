@@ -17,6 +17,7 @@ export enum EventCategory {
 
 // 추상화된 최상위 이벤트 정의 (Simulation Namespace)
 export namespace Simulation {
+    let seq = 0;
     export class Event<T = any> implements BaseEvent {
         id: string;
         type: string;
@@ -27,11 +28,12 @@ export namespace Simulation {
         priority: number;
 
         constructor(category: EventCategory, payload: T, sourceId?: string, priority: number = 1) {
-            this.id = Math.random().toString(36).substr(2, 9);
+            seq += 1;
+            this.id = `${category}_${seq}`;
             this.type = (this.constructor as { name: string }).name;
             this.category = category;
             this.payload = payload;
-            this.timestamp = Date.now();
+            this.timestamp = seq;
             this.sourceId = sourceId;
             this.priority = priority;
         }

@@ -7,16 +7,10 @@ import path from 'path';
 
 export class WormholeSystem extends BaseSystem {
   private world: World;
-  private openChancePerTick: number;
-  private travelChancePerTick: number;
-  private wormholeTtlTicks: number;
 
   constructor(world: World) {
     super('WormholeSystem', world.eventBus);
     this.world = world;
-    this.openChancePerTick = Number.parseFloat(process.env.AETHERIUS_WORMHOLE_OPEN_CHANCE || '0.01');
-    this.travelChancePerTick = Number.parseFloat(process.env.AETHERIUS_WORMHOLE_TRAVEL_CHANCE || '0.05');
-    this.wormholeTtlTicks = Number.parseInt(process.env.AETHERIUS_WORMHOLE_TTL_TICKS || '120', 10);
   }
 
   protected registerHandlers(): void {
@@ -34,15 +28,15 @@ export class WormholeSystem extends BaseSystem {
   private async maybeOpenRandomWormhole() {
     const worldIds = universeRegistry.listWorldIds();
     if (worldIds.length < 2) return;
-    if (Math.random() >= this.openChancePerTick) return;
+    if (this.world.random01() >= this.world.config.wormhole.openChancePerTick) return;
 
     const a = this.world.id;
-    const b = universeRegistry.pickRandomOtherWorldId(a);
+    const b = universeRegistry.pickRandomOtherWorldId(a, () => this.world.random01());
     if (!b) return;
 
-    const stability = Math.max(0.1, Math.min(1, 0.5 + (Math.random() - 0.5) * 0.4));
-    const wormholeId = `WH_${Math.random().toString(36).slice(2, 9)}`;
-    const expiresAtTick = this.world.tickCount + this.wormholeTtlTicks;
+    const stability = Math.max(0.1, Math.min(1, 0.5 + (this.world.random01() - 0.5) * 0.4));
+    const wormholeId = this.world.nextId('WH');
+    const expiresAtTick = this.world.tickCount + this.world.config.wormhole.ttlTicks;
 
     universeRegistry.upsertWormhole({
       id: wormholeId,
@@ -77,13 +71,13 @@ export class WormholeSystem extends BaseSystem {
   }
 
   private async maybeTravelThroughWormholes() {
-    if (Math.random() >= this.travelChancePerTick) return;
+    if (this.world.random01() >= this.world.config.wormhole.travelChancePerTick) return;
 
     const wormholes = universeRegistry.listWormholes();
     if (wormholes.length === 0) return;
-    const w = wormholes[Math.floor(Math.random() * wormholes.length)];
+    const w = wormholes[this.world.randomInt(wormholes.length)];
 
-    const fromWorldId = Math.random() < 0.5 ? w.a : w.b;
+    const fromWorldId = this.world.random01() < 0.5 ? w.a : w.b;
     const toWorldId = fromWorldId === w.a ? w.b : w.a;
 
     const from = universeRegistry.getWorld(fromWorldId);
@@ -96,15 +90,15 @@ export class WormholeSystem extends BaseSystem {
     });
 
     if (candidates.length === 0) return;
-    const entity = candidates[Math.floor(Math.random() * candidates.length)];
+    const entity = candidates[this.world.randomInt(candidates.length)];
 
     const ok = universeRegistry.transferEntity(entity.id, fromWorldId, toWorldId);
     if (!ok) return;
 
     const behavior = entity.children?.[0] as any;
     if (behavior?.components?.position) {
-      behavior.components.position.x = Math.random() * 100;
-      behavior.components.position.y = Math.random() * 100;
+      behavior.components.position.x = this.world.random01() * 100;
+      behavior.components.position.y = this.world.random01() * 100;
     }
 
     this.publish(new System.WormholeTravel(w.id, fromWorldId, toWorldId, entity.id, this.id));
@@ -141,9 +135,11 @@ export class WormholeSystem extends BaseSystem {
       });
     }
 
-    const dir = path.join(process.cwd(), 'data', 'reports');
-    await fs.mkdir(dir, { recursive: true });
-    const file = path.join(dir, 'wormholes.jsonl');
-    await fs.appendFile(file, `${JSON.stringify(entry)}\n`, 'utf8');
+    if (this.world.config.telemetry.writeJsonlToDisk) {
+      const dir = path.join(process.cwd(), 'data', 'reports');
+      await fs.mkdir(dir, { recursive: true });
+      const file = path.join(dir, 'wormholes.jsonl');
+      await fs.appendFile(file, `${JSON.stringify(entry)}\n`, 'utf8');
+    }
   }
 }

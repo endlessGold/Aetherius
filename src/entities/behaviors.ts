@@ -18,8 +18,8 @@ export class WeatherBehavior extends BehaviorNode<WeatherData> {
             // In a full simulation, this might apply changes to the grid over time
 
             // Example: Fluctuate temperature slightly
-            if (Math.random() < 0.05) {
-                c.weather.temperature += (Math.random() - 0.5) * 0.2 * context.deltaTime;
+            if (context.world.random01() < 0.05) {
+                c.weather.temperature += (context.world.random01() - 0.5) * 0.2 * context.deltaTime;
             }
 
             // Sync some global state if needed, or just let other systems query this entity
@@ -79,8 +79,8 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
             if (c.energy.energy <= 0) return;
 
             const speed = c.mission.mode === 'survey' ? 2.5 : 1.5;
-            c.position.x += (Math.random() - 0.5) * speed * context.deltaTime;
-            c.position.y += (Math.random() - 0.5) * speed * context.deltaTime;
+            c.position.x += (context.world.random01() - 0.5) * speed * context.deltaTime;
+            c.position.y += (context.world.random01() - 0.5) * speed * context.deltaTime;
             c.position.x = Math.max(0, Math.min(100, c.position.x));
             c.position.y = Math.max(0, Math.min(100, c.position.y));
 
@@ -141,10 +141,12 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
             details: JSON.stringify(clip)
         });
 
-        const dir = path.join(process.cwd(), 'data', 'reports');
-        await fs.mkdir(dir, { recursive: true });
-        const file = path.join(dir, 'documentary.jsonl');
-        await fs.appendFile(file, `${JSON.stringify(clip)}\n`, 'utf8');
+        if (context.world.config.telemetry.writeJsonlToDisk) {
+            const dir = path.join(process.cwd(), 'data', 'reports');
+            await fs.mkdir(dir, { recursive: true });
+            const file = path.join(dir, 'documentary.jsonl');
+            await fs.appendFile(file, `${JSON.stringify(clip)}\n`, 'utf8');
+        }
     }
 
     private intervene(context: UpdateContext) {
