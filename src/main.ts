@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { AssembleManager } from './entities/assembly.js';
-import { CommandHandler } from './interface/commandHandler.js';
-import { CLI } from './interface/cli.js';
-import { Server } from './interface/server.js';
+import { CommandHandler } from './app/commandHandler.js';
+import { CLI } from './app/cli.js';
+import { Server } from './app/server/server.js';
 import { universeRegistry } from './core/space/universeRegistry.js';
 import { createWorldWithAssembly, seedWorlds, type WorldWithAssembly } from './bootstrap/worldBootstrap.js';
 
@@ -12,7 +12,11 @@ function parseArgs(): { worldIds: string[]; mode: string } {
   const worldIds = worldsArg
     ? worldsArg.split(',').map((id) => id.trim()).filter(Boolean)
     : ['Alpha', 'Beta', 'Gamma'];
-  const mode = args.find((arg) => arg.startsWith('--mode='))?.split('=')[1] ?? 'cli';
+  const modeArg = args.find((arg) => arg.startsWith('--mode='));
+  const modeFromEq = modeArg?.split('=')[1];
+  const modeIdx = args.indexOf('--mode');
+  const modeFromNext = modeIdx >= 0 && args[modeIdx + 1] && !args[modeIdx + 1].startsWith('--') ? args[modeIdx + 1] : undefined;
+  const mode = modeFromEq ?? modeFromNext ?? 'cli';
   return { worldIds, mode };
 }
 
@@ -51,6 +55,17 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal Error:', err);
+main().catch((err: unknown) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  console.error('Fatal Error:', msg);
+  if (stack) console.error(stack);
+  if (err != null && typeof err === 'object' && !(err instanceof Error)) {
+    try {
+      console.error('Thrown value:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    } catch (_) {
+      console.error('Thrown value: [non-serializable]');
+    }
+  }
+  process.exit(1);
 });

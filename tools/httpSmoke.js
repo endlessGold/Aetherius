@@ -1,6 +1,12 @@
+#!/usr/bin/env node
+/**
+ * Aetherius HTTP API smoke test (model/linear, dataset/backup).
+ * Usage: node tools/httpSmoke.js
+ * Requires server running (e.g. npm run start:server).
+ */
 const base = process.env.AETHERIUS_HTTP_BASE || 'http://localhost:3000/api';
 
-async function post(path: string, body: any) {
+async function post(path, body) {
   const res = await fetch(`${base}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -31,4 +37,3 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-

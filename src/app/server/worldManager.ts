@@ -1,4 +1,4 @@
-import { World } from '../core/world.js';
+import { World } from '../../core/world.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class WorldManager {
@@ -23,7 +23,6 @@ export class WorldManager {
         return Array.from(this.worlds.keys());
     }
 
-    // Tick all worlds
     async tickAll(): Promise<void> {
         for (const world of this.worlds.values()) {
             try {

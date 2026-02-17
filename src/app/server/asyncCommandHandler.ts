@@ -1,10 +1,8 @@
-import { World } from '../core/world.js';
-import { CommandHandler } from '../interface/commandHandler.js';
+import { World } from '../../core/world.js';
+import { CommandHandler } from '../commandHandler.js';
 import { AsyncRequestEvent } from './worldSession.js';
-import { System } from '../core/events/eventTypes.js';
+import { System } from '../../core/events/eventTypes.js';
 
-// 기존 CommandHandler는 동기적이지만, 비동기 처리를 위해 래핑
-// World의 EventLoop에 등록되어 비동기 이벤트를 실제 로직으로 연결
 export class AsyncCommandHandler {
     private world: World;
     private baseHandler: CommandHandler;
@@ -14,7 +12,6 @@ export class AsyncCommandHandler {
         this.baseHandler = baseHandler;
     }
 
-    // World의 EventLoop에 핸들러 등록
     registerHandlers() {
         this.world.eventLoop.register(System.AsyncRequest, async (event: any) => {
             const req = event as AsyncRequestEvent;
@@ -26,7 +23,6 @@ export class AsyncCommandHandler {
                 let result;
                 switch (action) {
                     case 'command':
-                        // params.cmdStr 예: "spawn_entity plant Rose"
                         if (typeof params?.cmdStr === 'string') {
                             const cmd = params.cmdStr.trim().toLowerCase();
                             if (cmd.startsWith('advance_tick') || cmd.startsWith('warp_evolution')) {

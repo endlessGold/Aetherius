@@ -9,4 +9,3 @@ export const handleGetLatestSnapshot = (session: WorldSession) => async (req: Re
     res.status(500).json({ success: false, message: error.message });
   }
 };
-

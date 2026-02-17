@@ -13,6 +13,7 @@
 npm install
 npm start -- --mode cli
 ```
+(첫 실행 시 빌드가 자동 실행됩니다. 이미 빌드된 상태에서 빠르게 다시 실행하려면 `npm run start:dist:cli`)
 
 서버로 띄우려면:
 ```bash
@@ -202,16 +203,16 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
 ## 2.8 디렉터리 구조 (Compact Layout)
 ```text
 src/
+  app/          사용자 대면 진입: CLI(app/cli.ts), 서버(app/server/: Express, 라우터, WorldSession, API)
+  command/      명령 파싱·실행(commandHandler), 명령 레지스트리·핸들러(commands/)
   core/         월드/이벤트/환경/시스템(physics, sensor, wormhole, maze 등)
   entities/     AssembleManager 기반 엔티티 조립(plant/creature/weather/ecosystem)
-  interface/    CLI·Server 진입점, CommandHandler(명령 처리)
-  server/       REST 라우터, WorldSession, 비동기 요청 래퍼, API 핸들러
   bootstrap/    월드 생성·어셈블·시드(createWorldWithAssembly, seedWorlds)
   ai/           로컬 LLM 어댑터 + Science/AI 오케스트레이터
 api/            (Vercel) 서버리스 엔드포인트 + JWT 인증
 public/         (Vercel) 브라우저 콘솔 UI
-tools/          smoke/헤드리스 실행 스크립트
-docs/           Phase 문서, 재설계/리팩터 가이드(DESIGN_REFACTOR.md)
+tools/          smoke.js, run_headless.js(dataset CLI), httpSmoke.js
+docs/           Phase 문서, 재설계/리팩터 가이드(DESIGN_REFACTOR.md), CLI 사용법(CLI_USAGE.md)
 ```
 
 ---

@@ -9,7 +9,6 @@ export const handlePostCommand = (session: WorldSession) => async (req: Request,
     }
 
     try {
-        // Enqueue command and wait for next tick execution
         const result = await session.enqueueRequest('command', { cmdStr: cmd });
         res.json(result);
     } catch (error: any) {

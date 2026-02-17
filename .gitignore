@@ -18,8 +18,9 @@ Thumbs.db
 .idea/
 *.swp
 
-# Local runtime artifacts
+# Local runtime artifacts (프로젝트 룰만 커밋)
 .trae/
+!.trae/project_rules.md
 data/
 datasets/
 models/

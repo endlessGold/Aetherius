@@ -1,13 +1,12 @@
-import { World } from '../core/world.js';
-import { System } from '../core/events/eventTypes.js';
+import { World } from '../../core/world.js';
+import { System } from '../../core/events/eventTypes.js';
 
-// 비동기 요청을 Tick 루프에 안전하게 전달하기 위한 래퍼 이벤트
 export type AsyncRequestEvent = System.AsyncRequest;
 
 export class WorldSession {
     public world: World;
     private isRunning: boolean = false;
-    private tickIntervalMs: number = 1000; // 1초
+    private tickIntervalMs: number = 1000;
     private tickTimer: NodeJS.Timeout | null = null;
     private isTicking: boolean = false;
 
@@ -37,7 +36,6 @@ export class WorldSession {
         console.log(`[WorldSession] Stopped tick loop for world ${this.world.id}`);
     }
 
-    // 핵심: API 요청을 이벤트 큐에 넣고 Promise 반환 (비동기 대기)
     enqueueRequest(action: string, params: any): Promise<any> {
         return new Promise((resolve, reject) => {
             const event = new System.AsyncRequest({
@@ -48,9 +46,6 @@ export class WorldSession {
                 reject
             });
 
-            // World의 EventLoop에 등록
-            // 주의: World의 EventLoop는 단순히 emit만 하므로,
-            // 이를 처리할 핸들러가 등록되어 있어야 함.
             this.world.eventLoop.emit(event);
         });
     }
@@ -73,8 +68,6 @@ export class WorldSession {
         if (this.isTicking) return;
         this.isTicking = true;
         try {
-            // 1. World Tick 실행 (여기서 내부 큐에 쌓인 이벤트들이 처리됨)
-            // AsyncRequestEvent는 별도의 핸들러가 처리해야 함
             await this.world.tick();
         } catch (error) {
             console.error(`[WorldSession] Tick error in world ${this.world.id}:`, error);

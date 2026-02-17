@@ -15,24 +15,26 @@
 | 레이어 | 역할 | 대표 파일 |
 |--------|------|------------|
 | 진입·부트스트랩 | 모드(CLI/Server) 선택, 월드 생성·시드 | `main.ts`, `bootstrap/worldBootstrap.ts` |
-| 명령 | 문자열 명령 파싱 → 실행 | `interface/commandHandler.ts` |
+| 앱(진입) | CLI·서버 진입, 라우팅 | `app/cli.ts`, `app/server/server.ts`, `app/server/router.ts` |
+| 명령 | 문자열 명령 파싱 → 실행 | `command/commandHandler.ts`, `command/commands/` |
 | 월드·시스템 | Tick 루프, 환경·생태·웜홀 등 | `core/world.ts`, `core/systems/*` |
 | 엔티티·조립 | ECR/ECE 엔티티, 카탈로그 | `entities/assembly.ts`, `entities/catalog.ts` |
 | 저장 | 스냅샷/이벤트 저장 (env 기반 드라이버) | `data/persistence.ts`, `data/noSqlAdapter.ts` |
-| 서버 API | REST, 세션, Tick/Command 라우트 | `server/router.ts`, `server/worldSession.ts` |
 
 ## 디렉터리
 
+- `src/app` — 사용자 대면 진입: CLI(`app/cli.ts`), 서버(`app/server/`: Express, 라우터, 세션, 비동기 명령)
+- `src/command` — 명령 파싱·실행(`commandHandler.ts`), 명령 레지스트리·도메인별 핸들러(`commands/`)
 - `src/core` — 엔진 코어(World, EventBus, 환경 그리드, 시스템)
 - `src/entities` — 엔티티·비헤이비어·카탈로그·생태/진화 시스템
-- `src/interface` — CLI, Server, CommandHandler
-- `src/server` — API 라우터, WorldSession, 비동기 명령 처리
 - `src/bootstrap` — 월드 생성·어셈블·시드
 - `src/ai` — LLM, 과학자 에이전트, TensorFlow 예측
 - `src/data` — Persistence, NoSQL 어댑터
+- `tools/` — 스모크·헤드리스·HTTP 스모크 등 실행 스크립트
+- `docs/updates/` — 업데이트 로그
 
 ## 확장·리팩터
 
-- 명령 추가: `CommandHandler.execute()` switch + 핸들러 메서드 (추후 레지스트리 패턴 검토)
+- 명령 추가: `command/commandHandler.ts` 또는 `command/commands/` 하위 모듈에 핸들러 추가 (레지스트리 패턴 준비됨)
 - 시스템 추가: `World` 생성자 또는 주입 옵션 + Tick 순서 (추후 파이프라인화 검토)
 - 상세 이슈·재설계: [DESIGN_REFACTOR.md](DESIGN_REFACTOR.md)

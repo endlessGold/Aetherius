@@ -1,6 +1,39 @@
+#!/usr/bin/env node
+/**
+ * Aetherius Dataset CLI (학습데이터 수집·정규화·선형 학습·백업)
+ * - 서버 API(tick, snapshot/latest, dataset/backup, model/linear) 사용
+ * - steps > 0: 수집만 또는 수집 후 --train-after --apply --backup
+ * - steps = 0 (기본): 자동 모드(duration 분 동안 cycle 반복, 주기적 백업/적용)
+ *
+ * 사용법:
+ *   node tools/run_headless.js [옵션...]
+ *   npm run dataset:cli -- steps=200
+ *   npm run dataset:cli -- steps=500 --train-after --backup
+ *   npm run dataset:cli -- apiBase=http://localhost:3000/api duration=60 cycle=200
+ *
+ * 옵션 (key=value):
+ *   apiBase     API 베이스 URL (기본: http://localhost:3000/api)
+ *   steps       수집할 tick 수. 0이면 자동 모드 (기본: 0)
+ *   interval    tick 간 대기 ms (기본: 0)
+ *   duration    자동 모드 실행 시간(분) (기본: 240)
+ *   cycle       자동 모드 한 사이클당 tick 수 (기본: 200)
+ *   maxrows     유지할 최대 행 수 (기본: 50000)
+ *   backup      자동 모드에서 백업 간격(분) (기본: 60)
+ *   epochs      학습 에폭 (기본: 3)
+ *   batch       배치 크기 (기본: 128)
+ *   lr          학습률 (기본: 0.01)
+ *
+ * 플래그 (steps > 0 일 때 수집 후 실행):
+ *   --train-after   수집 후 선형 모델 학습 1회
+ *   --apply         학습된 모델을 서버에 적용 (POST /model/linear)
+ *   --backup        데이터셋을 서버 백업 (POST /dataset/backup)
+ *   --help          이 도움말 출력
+ */
+
 import * as tf from '@tensorflow/tfjs';
 
 const args = process.argv.slice(2);
+const flags = { help: false, trainAfter: false, apply: false, backup: false };
 const params = {
   apiBase: 'http://localhost:3000/api',
   duration: 240,
@@ -14,15 +47,45 @@ const params = {
   interval: 0
 };
 
-args.forEach((arg) => {
+for (const arg of args) {
+  if (arg === '--help' || arg === '-h') {
+    flags.help = true;
+    continue;
+  }
+  if (arg === '--train-after') {
+    flags.trainAfter = true;
+    continue;
+  }
+  if (arg === '--apply') {
+    flags.apply = true;
+    continue;
+  }
+  if (arg === '--backup') {
+    flags.backup = true;
+    continue;
+  }
   const [key, val] = arg.split('=');
-  if (!key || val == null || !(key in params)) return;
+  if (!key || val == null || !(key in params)) continue;
   if (key === 'apiBase') {
     params.apiBase = val;
   } else {
     params[key] = Number(val);
   }
-});
+}
+
+if (flags.help) {
+  console.log(`
+Aetherius Dataset CLI — 서버 API로 tick 수집·정규화·선형 학습·백업
+
+  npm run dataset:cli -- [옵션...] [--train-after] [--apply] [--backup]
+
+  steps > 0  수집 모드: 지정 tick만 수집. --train-after/--apply/--backup 시 수집 후 실행.
+  steps = 0 자동 모드: duration(분) 동안 cycle마다 수집·학습, backup(분)마다 백업/적용.
+
+  옵션 예: apiBase=... steps=200 duration=60 cycle=200 maxrows=50000
+`);
+  process.exit(0);
+}
 
 const FEATURE_ORDER = [
   'energy',
@@ -269,8 +332,19 @@ async function backupDatasetToGit(apiBase) {
 
 async function runOnce() {
   await initTf();
-  await collectSteps(Math.max(1, params.steps), Math.max(0, params.interval), Math.max(1000, params.maxrows), params.apiBase.replace(/\/$/, ''));
+  const apiBase = params.apiBase.replace(/\/$/, '');
+  await collectSteps(Math.max(1, params.steps), Math.max(0, params.interval), Math.max(1000, params.maxrows), apiBase);
   log(`완료: rows=${rows.length}`);
+
+  if (rows.length > 0 && flags.trainAfter) {
+    await trainLinear();
+  }
+  if (flags.apply && trained) {
+    await applyToServer(apiBase);
+  }
+  if (flags.backup && rows.length > 0) {
+    await backupDatasetToGit(apiBase);
+  }
 }
 
 async function autoRun() {
