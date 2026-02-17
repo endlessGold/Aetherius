@@ -35,6 +35,11 @@ export class CommandHandler {
     });
   }
 
+  /** World 참조 (서버/테스트에서 세션·라우터 연결용). */
+  getWorld(): World {
+    return this.world;
+  }
+
   private getManager() {
     return this.world.getAssembleManager();
   }
@@ -580,7 +585,9 @@ export class CommandHandler {
         details
       });
 
-      await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
+      if (this.world.config.telemetry.writeJsonlToDisk) {
+        await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
+      }
 
       return { success: true, message: markdown };
     } catch (e: any) {

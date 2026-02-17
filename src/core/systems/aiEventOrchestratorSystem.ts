@@ -204,9 +204,11 @@ Output JSON only:
       details
     });
 
-    const dir = path.join(process.cwd(), 'data', 'reports');
-    await fs.mkdir(dir, { recursive: true });
-    const file = path.join(dir, 'ai_event_decisions.jsonl');
-    await fs.appendFile(file, `${details}\n`, 'utf8');
+    if (this.world.config.telemetry.writeJsonlToDisk) {
+      const dir = path.join(process.cwd(), 'data', 'reports');
+      await fs.mkdir(dir, { recursive: true });
+      const file = path.join(dir, 'ai_event_decisions.jsonl');
+      await fs.appendFile(file, `${details}\n`, 'utf8');
+    }
   }
 }

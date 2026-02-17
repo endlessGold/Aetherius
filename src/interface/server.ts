@@ -21,8 +21,7 @@ export class Server {
     
     // Initialize World System
     this.worldManager = new WorldManager();
-    // Use the handler's world as the default world
-    const defaultWorld = (handler as any).world; 
+    const defaultWorld = handler.getWorld(); 
     
     this.session = new WorldSession(defaultWorld);
     this.asyncCommandHandler = new AsyncCommandHandler(defaultWorld, handler);

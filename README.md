@@ -204,12 +204,14 @@ export class PlantBehavior extends BehaviorNode<PlantData> {
 src/
   core/         월드/이벤트/환경/시스템(physics, sensor, wormhole, maze 등)
   entities/     AssembleManager 기반 엔티티 조립(plant/creature/weather/ecosystem)
-  interface/    CLI/Express 서버 엔트리(명령 처리 포함)
-  server/       REST 라우터/세션/비동기 요청 래퍼
+  interface/    CLI·Server 진입점, CommandHandler(명령 처리)
+  server/       REST 라우터, WorldSession, 비동기 요청 래퍼, API 핸들러
+  bootstrap/    월드 생성·어셈블·시드(createWorldWithAssembly, seedWorlds)
   ai/           로컬 LLM 어댑터 + Science/AI 오케스트레이터
 api/            (Vercel) 서버리스 엔드포인트 + JWT 인증
 public/         (Vercel) 브라우저 콘솔 UI
 tools/          smoke/헤드리스 실행 스크립트
+docs/           Phase 문서, 재설계/리팩터 가이드(DESIGN_REFACTOR.md)
 ```
 
 ---

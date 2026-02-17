@@ -89,6 +89,7 @@ export class MongoNoSqlAdapter implements NoSqlAdapter {
   private uri: string;
   private dbName: string;
   private client: any | null = null;
+  private evolutionIndexCreated = false;
 
   constructor(uri: string, dbName: string) {
     this.uri = uri;
@@ -124,20 +125,16 @@ export class MongoNoSqlAdapter implements NoSqlAdapter {
   }
 
   async saveEvolutionStats(stats: EvolutionStats): Promise<void> {
-    const db = (await this.getCollection()).dbName; // Reuse connection
-    const client = this.client;
-    const col = client.db(this.dbName).collection('evolution_history');
-    
-    // Lazy index creation (could be optimized)
-    if (!this.client._indexesCreated) {
-       await col.createIndex({ worldId: 1, generation: 1 });
-       this.client._indexesCreated = true;
+    if (!this.client) await this.getCollection();
+    const col = this.client!.db(this.dbName).collection('evolution_history');
+    if (!this.evolutionIndexCreated) {
+      await col.createIndex({ worldId: 1, generation: 1 });
+      this.evolutionIndexCreated = true;
     }
-
     await col.updateOne(
-        { worldId: stats.worldId, generation: stats.generation },
-        { $set: stats },
-        { upsert: true }
+      { worldId: stats.worldId, generation: stats.generation },
+      { $set: stats },
+      { upsert: true }
     );
   }
 

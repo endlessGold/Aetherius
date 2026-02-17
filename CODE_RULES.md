@@ -37,5 +37,12 @@
   - `src/core`: 엔진의 규칙/시간/이벤트/월드
   - `src/components`: 노드에 부착되는 상태+반응 단위
   - `src/core/systems`: 이벤트 리액터(구독 기반)
-  - `src/interface`, `src/server`: 외부 입출력(명령을 큐로 전달)
+  - `src/interface`: CLI·Server 진입점 및 CommandHandler
+  - `src/server`: REST 라우터, WorldSession, API 핸들러(명령을 큐로 전달)
+  - `src/bootstrap`: 월드 생성·어셈블·시드 등 앱 부트스트랩
+
+## 6) 이벤트: EventLoop vs EventBus
+
+- **EventBus**: 시뮬레이션 이벤트의 주 채널. Tick, Biological, System, Command 등 네임스페이스 이벤트는 EventBus로 발행·구독한다. 신규 기능은 EventBus 기준으로 구현한다.
+- **EventLoop**: 레거시. 현재는 서버 모드의 `AsyncRequest`(API 요청을 Tick 경계에서 실행) 처리용으로만 사용한다. EventLoop에 새 이벤트 타입을 붙이지 말고, 필요 시 EventBus로 마이그레이션한다.
 
