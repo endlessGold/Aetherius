@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Secrets
+secrets/
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Local runtime artifacts (프로젝트 룰만 커밋)
+.trae/
+!.trae/project_rules.md
+data/
+datasets/
+models/
+
+# 임시 문서·일회용 스크립트 (CODE_RULES §7)
+_temp/
+.scratch/
+.aider*
