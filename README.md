@@ -36,7 +36,7 @@ npm start -- --mode server
 - **이벤트 중심**: 시스템들은 `EventBus`를 구독하고, Tick 경계에서 이벤트 큐가 처리됩니다.
 - **구성 방식**: 월드는 환경(그리드) + 시스템(EventBus 구독) + 엔티티(AssembleManager/ECR/ECE)로 구성됩니다.
 - **멀티월드**: `UniverseRegistry`가 월드/매니저를 등록하고, 웜홀로 엔티티를 이동시킬 수 있습니다.
-- **실행 모드**: 로컬 CLI/서버(Express) + Vercel(Serverless API + 브라우저 로그인) 둘 다 지원합니다.
+- **실행 모드**: 단일 코드베이스로 로컬 CLI 클라이언트와 HTTP 서버(Express)·브라우저(로그인 콘솔)를 모두 지원하는 하이브리드 구조입니다.
 
 ---
 

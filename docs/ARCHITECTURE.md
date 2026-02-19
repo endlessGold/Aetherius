@@ -15,7 +15,7 @@
 | 레이어 | 역할 | 대표 파일 |
 |--------|------|------------|
 | 진입·부트스트랩 | 모드(CLI/Server) 선택, 월드 생성·시드 | `main.ts`, `bootstrap/worldBootstrap.ts` |
-| 앱(진입) | CLI·서버 진입, 라우팅 | `app/cli.ts`, `app/server/server.ts`, `app/server/router.ts` |
+| 앱(진입) | CLI·서버 진입, 라우팅 (하이브리드: 터미널 클라이언트 + HTTP 서버) | `app/cli.ts`, `app/server/server.ts`, `app/server/router.ts` |
 | 명령 | 문자열 명령 파싱 → 실행 | `command/commandHandler.ts`, `command/commands/` |
 | 월드·시스템 | Tick 루프, 환경·생태·웜홀 등 | `core/world.ts`, `core/systems/*` |
 | 엔티티·조립 | ECR/ECE 엔티티, 카탈로그 | `entities/assembly.ts`, `entities/catalog.ts` |
