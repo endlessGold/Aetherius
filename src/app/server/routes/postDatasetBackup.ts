@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import JSON5 from 'json5';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -19,7 +20,15 @@ export const handlePostDatasetBackup = () => async (req: Request, res: Response)
   try {
     const { jsonl, name } = req.body || {};
     if (!jsonl || typeof jsonl !== 'string') {
-      res.status(400).json({ success: false, message: 'Missing "jsonl" string.' });
+      const body = { success: false, message: 'Missing "jsonl" string.' };
+      const format = (req.query.format as string | undefined)?.toLowerCase();
+      const wantJson5 = format === 'json5' || (typeof req.headers['accept'] === 'string' && req.headers['accept'].includes('application/json5'));
+      if (wantJson5) {
+        res.status(400).setHeader('Content-Type', 'application/json5; charset=utf-8');
+        res.send(JSON5.stringify(body));
+        return;
+      }
+      res.status(400).json(body);
       return;
     }
 
@@ -39,8 +48,24 @@ export const handlePostDatasetBackup = () => async (req: Request, res: Response)
       await execFileAsync('git', ['commit', '-m', `Dataset backup: ${path.basename(filePath)}`], root);
     }
 
-    res.json({ success: true, file: path.relative(root, filePath), committed: doCommit });
+    const body = { success: true, file: path.relative(root, filePath), committed: doCommit };
+    const format = (req.query.format as string | undefined)?.toLowerCase();
+    const wantJson5 = format === 'json5' || (typeof req.headers['accept'] === 'string' && req.headers['accept'].includes('application/json5'));
+    if (wantJson5) {
+      res.setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(body));
+      return;
+    }
+    res.json(body);
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    const body = { success: false, message: error.message };
+    const format = (req.query.format as string | undefined)?.toLowerCase();
+    const wantJson5 = format === 'json5' || (typeof req.headers['accept'] === 'string' && req.headers['accept'].includes('application/json5'));
+    if (wantJson5) {
+      res.status(500).setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(body));
+      return;
+    }
+    res.status(500).json(body);
   }
 };

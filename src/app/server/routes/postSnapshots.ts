@@ -4,21 +4,43 @@
  */
 
 import { Request, Response } from 'express';
+import JSON5 from 'json5';
 import { WorldSession } from '../worldSession.js';
 import type { TickSnapshot } from '../../../data/noSqlAdapter.js';
 
+function wantsJson5(req: Request): boolean {
+  const format = (req.query.format as string | undefined)?.toLowerCase();
+  if (format === 'json5') return true;
+  const accept = req.headers['accept'];
+  if (typeof accept === 'string' && accept.includes('application/json5')) return true;
+  if (Array.isArray(accept) && accept.some((v) => v.includes('application/json5'))) return true;
+  return false;
+}
+
 export const handlePostSnapshots = (session: WorldSession) => async (req: Request, res: Response) => {
   if (req.method !== 'POST') {
-    res.status(405).json({ success: false, message: 'Method Not Allowed' });
+    const body = { success: false, message: 'Method Not Allowed' };
+    if (wantsJson5(req)) {
+      res.status(405).setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(body));
+      return;
+    }
+    res.status(405).json(body);
     return;
   }
 
   const body = req.body as TickSnapshot | undefined;
   if (!body || typeof body.worldId !== 'string' || typeof body.tick !== 'number') {
-    res.status(400).json({
+    const resp = {
       success: false,
       message: 'Invalid body: need { worldId: string, tick: number, timestamp: number, nodes?, entities? }'
-    });
+    };
+    if (wantsJson5(req)) {
+      res.status(400).setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(resp));
+      return;
+    }
+    res.status(400).json(resp);
     return;
   }
 
@@ -36,15 +58,27 @@ export const handlePostSnapshots = (session: WorldSession) => async (req: Reques
 
   try {
     await session.world.persistence.saveTickSnapshot(snapshot);
-    res.json({
+    const resp = {
       success: true,
       message: 'Snapshot uploaded to DB.',
       driver: session.world.persistence.driver,
       worldId: snapshot.worldId,
       tick: snapshot.tick
-    });
+    };
+    if (wantsJson5(req)) {
+      res.setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(resp));
+      return;
+    }
+    res.json(resp);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ success: false, message: msg });
+    const resp = { success: false, message: msg };
+    if (wantsJson5(req)) {
+      res.status(500).setHeader('Content-Type', 'application/json5; charset=utf-8');
+      res.send(JSON5.stringify(resp));
+      return;
+    }
+    res.status(500).json(resp);
   }
 };
