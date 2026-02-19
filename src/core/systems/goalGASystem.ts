@@ -1,7 +1,7 @@
 import { World } from '../world.js';
 import { NodeInterface } from '../interfaces.js';
 import { Entity } from '../node.js';
-import { Layer } from '../environment/environmentGrid.js';
+import { EnvironmentLayer } from '../environment/environmentGrid.js';
 import { GoalGAComponent, GoalKind, GoalGenome } from '../../components/goalGaComponent.js';
 import { PRNG, hashStringToSeed } from '../../ai/prng.js';
 import { NodePool } from '../nodePool.js';
@@ -106,11 +106,11 @@ export class GoalGASystem {
 
   private sampleEnvironment(world: World, x: number, y: number) {
     const grid = world.environment;
-    const temperature = grid.get(x, y, Layer.Temperature);
-    const humidity = grid.get(x, y, Layer.Humidity);
-    const soilMoisture = grid.get(x, y, Layer.SoilMoisture);
-    const light = grid.get(x, y, Layer.LightIntensity);
-    const nitrogen = grid.get(x, y, Layer.SoilNitrogen);
+    const temperature = grid.get(x, y, EnvironmentLayer.Temperature);
+    const humidity = grid.get(x, y, EnvironmentLayer.Humidity);
+    const soilMoisture = grid.get(x, y, EnvironmentLayer.SoilMoisture);
+    const light = grid.get(x, y, EnvironmentLayer.LightIntensity);
+    const nitrogen = grid.get(x, y, EnvironmentLayer.SoilNitrogen);
     return { temperature, humidity, soilMoisture, light, nitrogen };
   }
 

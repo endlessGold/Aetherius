@@ -1,11 +1,11 @@
-import { Grid, Layer, EnvLayer } from './environmentGrid.js';
+import { EnvironmentGrid, EnvironmentLayer } from './environmentGrid.js';
 import type { PRNG } from '../../ai/prng.js';
 import { getEnvironmentRecipe, type EnvironmentRecipeId } from './environmentRecipes.js';
 
 export class NatureSystem {
-  grid: Grid;
+  grid: EnvironmentGrid;
 
-  constructor(grid: Grid) {
+  constructor(grid: EnvironmentGrid) {
     this.grid = grid;
   }
 
@@ -41,36 +41,36 @@ export class NatureSystem {
 
       // 1. 태양 복사열 (Solar Radiation)
       if (isDay) {
-        const humidity = chunk[baseIndex + Layer.Humidity];
+        const humidity = chunk[baseIndex + EnvironmentLayer.Humidity];
         const actualLight = sunIntensity * (1.0 - humidity * 0.8);
-        chunk[baseIndex + Layer.LightIntensity] = actualLight;
-        chunk[baseIndex + Layer.Temperature] += actualLight * 0.0001;
-        chunk[baseIndex + Layer.UVRadiation] = actualLight * 0.1; // 자외선
+        chunk[baseIndex + EnvironmentLayer.LightIntensity] = actualLight;
+        chunk[baseIndex + EnvironmentLayer.Temperature] += actualLight * 0.0001;
+        chunk[baseIndex + EnvironmentLayer.UVRadiation] = actualLight * 0.1; // 자외선
       } else {
-        chunk[baseIndex + Layer.LightIntensity] = 0;
-        chunk[baseIndex + Layer.UVRadiation] = 0;
+        chunk[baseIndex + EnvironmentLayer.LightIntensity] = 0;
+        chunk[baseIndex + EnvironmentLayer.UVRadiation] = 0;
       }
 
       // 2. 물 순환 (Water Cycle)
-      const temp = chunk[baseIndex + Layer.Temperature];
-      const soilMoisture = chunk[baseIndex + Layer.SoilMoisture];
-      const humidity = chunk[baseIndex + Layer.Humidity];
+      const temp = chunk[baseIndex + EnvironmentLayer.Temperature];
+      const soilMoisture = chunk[baseIndex + EnvironmentLayer.SoilMoisture];
+      const humidity = chunk[baseIndex + EnvironmentLayer.Humidity];
 
       // 증발
       if (soilMoisture > 0 && temp > 0) {
         const evapRate = 0.001 * (temp / 20);
         const amount = Math.min(soilMoisture, evapRate);
-        chunk[baseIndex + Layer.SoilMoisture] -= amount;
-        chunk[baseIndex + Layer.Humidity] += amount;
+        chunk[baseIndex + EnvironmentLayer.SoilMoisture] -= amount;
+        chunk[baseIndex + EnvironmentLayer.Humidity] += amount;
       }
 
       // 강수
       if (humidity > 0.8) {
         const rainAmount = (humidity - 0.8) * 0.1;
-        chunk[baseIndex + Layer.Humidity] -= rainAmount;
-        chunk[baseIndex + Layer.SoilMoisture] += rainAmount;
-        chunk[baseIndex + Layer.Temperature] -= rainAmount * 5;
-        chunk[baseIndex + Layer.GroundWaterLevel] += rainAmount * 0.5; // 지하수 함양
+        chunk[baseIndex + EnvironmentLayer.Humidity] -= rainAmount;
+        chunk[baseIndex + EnvironmentLayer.SoilMoisture] += rainAmount;
+        chunk[baseIndex + EnvironmentLayer.Temperature] -= rainAmount * 5;
+        chunk[baseIndex + EnvironmentLayer.GroundWaterLevel] += rainAmount * 0.5; // 지하수 함양
       }
 
       // 3. 바람 (Wind) - 절차적 생성 (Procedural Generation)
@@ -84,10 +84,10 @@ export class NatureSystem {
       const nx = gx * 0.05;
       const ny = gy * 0.05;
 
-      chunk[baseIndex + Layer.WindX] = Math.sin(ny + time) + Math.cos(nx * 0.5);
-      chunk[baseIndex + Layer.WindY] = Math.cos(nx + time) - Math.sin(ny * 0.5);
+      chunk[baseIndex + EnvironmentLayer.WindX] = Math.sin(ny + time) + Math.cos(nx * 0.5);
+      chunk[baseIndex + EnvironmentLayer.WindY] = Math.cos(nx + time) - Math.sin(ny * 0.5);
       // 3D 바람 (수직 기류)
-      chunk[baseIndex + Layer.WindZ] = (chunk[baseIndex + Layer.Temperature] - 20) * 0.1;
+      chunk[baseIndex + EnvironmentLayer.WindZ] = (chunk[baseIndex + EnvironmentLayer.Temperature] - 20) * 0.1;
     }
   }
 
@@ -100,23 +100,23 @@ export class NatureSystem {
     // 시작 지점 주변만 초기화
     for (let y = 0; y < startSize; y++) {
       for (let x = 0; x < startSize; x++) {
-        const baseTemp = recipe.base[EnvLayer.Temperature] ?? 20;
-        const baseHumidity = recipe.base[EnvLayer.Humidity] ?? 0.5;
-        const baseSoilMoisture = recipe.base[EnvLayer.SoilMoisture] ?? 0.4;
-        const baseNitrogen = recipe.base[EnvLayer.SoilNitrogen] ?? 0.8;
-        const basePh = recipe.base[EnvLayer.PHLevel] ?? 6.5;
-        const baseOrganic = recipe.base[EnvLayer.OrganicMatter] ?? 0.3;
-        const baseGroundWater = recipe.base[EnvLayer.GroundWaterLevel] ?? 5.0;
-        const baseSalinity = recipe.base[EnvLayer.SoilSalinity] ?? 0.01;
+        const baseTemp = recipe.base[EnvironmentLayer.Temperature] ?? 20;
+        const baseHumidity = recipe.base[EnvironmentLayer.Humidity] ?? 0.5;
+        const baseSoilMoisture = recipe.base[EnvironmentLayer.SoilMoisture] ?? 0.4;
+        const baseNitrogen = recipe.base[EnvironmentLayer.SoilNitrogen] ?? 0.8;
+        const basePh = recipe.base[EnvironmentLayer.PHLevel] ?? 6.5;
+        const baseOrganic = recipe.base[EnvironmentLayer.OrganicMatter] ?? 0.3;
+        const baseGroundWater = recipe.base[EnvironmentLayer.GroundWaterLevel] ?? 5.0;
+        const baseSalinity = recipe.base[EnvironmentLayer.SoilSalinity] ?? 0.01;
 
-        this.grid.set(x, y, Layer.Temperature, baseTemp + (rand() - 0.5) * 5);
-        this.grid.set(x, y, Layer.Humidity, baseHumidity + (rand() - 0.5) * 0.2);
-        this.grid.set(x, y, Layer.SoilNitrogen, baseNitrogen);
-        this.grid.set(x, y, Layer.SoilMoisture, baseSoilMoisture);
-        this.grid.set(x, y, Layer.PHLevel, basePh + (rand() - 0.5) * 0.5);
-        this.grid.set(x, y, Layer.OrganicMatter, baseOrganic);
-        this.grid.set(x, y, Layer.GroundWaterLevel, baseGroundWater);
-        this.grid.set(x, y, Layer.SoilSalinity, baseSalinity);
+        this.grid.set(x, y, EnvironmentLayer.Temperature, baseTemp + (rand() - 0.5) * 5);
+        this.grid.set(x, y, EnvironmentLayer.Humidity, baseHumidity + (rand() - 0.5) * 0.2);
+        this.grid.set(x, y, EnvironmentLayer.SoilNitrogen, baseNitrogen);
+        this.grid.set(x, y, EnvironmentLayer.SoilMoisture, baseSoilMoisture);
+        this.grid.set(x, y, EnvironmentLayer.PHLevel, basePh + (rand() - 0.5) * 0.5);
+        this.grid.set(x, y, EnvironmentLayer.OrganicMatter, baseOrganic);
+        this.grid.set(x, y, EnvironmentLayer.GroundWaterLevel, baseGroundWater);
+        this.grid.set(x, y, EnvironmentLayer.SoilSalinity, baseSalinity);
       }
     }
     console.log("Environment initialized with high-resolution parameters.");
@@ -131,7 +131,7 @@ export class NatureSystem {
         const gx = x + dx;
         const gy = y + dy;
         for (const [layerKey, value] of Object.entries(recipe.base)) {
-          const layer = Number(layerKey) as EnvLayer;
+          const layer = Number(layerKey) as EnvironmentLayer;
           this.grid.set(gx, gy, layer, value as number);
         }
       }

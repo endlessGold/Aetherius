@@ -1,38 +1,37 @@
 // 고해상도 환경 시뮬레이션을 위한 데이터 구조체
 // 메모리 효율성을 위해 TypedArray(Float32Array)를 사용합니다.
 // Chunk 시스템을 도입하여 10억 개(1 Billion) 이상의 파라미터를 처리할 수 있는 구조를 구현합니다.
-export var EnvLayer;
-(function (EnvLayer) {
-    EnvLayer[EnvLayer["Temperature"] = 0] = "Temperature";
-    EnvLayer[EnvLayer["Humidity"] = 1] = "Humidity";
-    EnvLayer[EnvLayer["SoilMoisture"] = 2] = "SoilMoisture";
-    EnvLayer[EnvLayer["SoilNitrogen"] = 3] = "SoilNitrogen";
-    EnvLayer[EnvLayer["SoilPhosphorus"] = 4] = "SoilPhosphorus";
-    EnvLayer[EnvLayer["SoilPotassium"] = 5] = "SoilPotassium";
-    EnvLayer[EnvLayer["LightIntensity"] = 6] = "LightIntensity";
-    EnvLayer[EnvLayer["WindX"] = 7] = "WindX";
-    EnvLayer[EnvLayer["WindY"] = 8] = "WindY";
-    EnvLayer[EnvLayer["CO2Concentration"] = 9] = "CO2Concentration";
-    EnvLayer[EnvLayer["Elevation"] = 10] = "Elevation";
-    EnvLayer[EnvLayer["Pollution"] = 11] = "Pollution";
-    EnvLayer[EnvLayer["MicrobialActivity"] = 12] = "MicrobialActivity";
-    EnvLayer[EnvLayer["RootDensity"] = 13] = "RootDensity";
-    EnvLayer[EnvLayer["Compaction"] = 14] = "Compaction";
-    EnvLayer[EnvLayer["PHLevel"] = 15] = "PHLevel";
+export var EnvironmentLayer;
+(function (EnvironmentLayer) {
+    EnvironmentLayer[EnvironmentLayer["Temperature"] = 0] = "Temperature";
+    EnvironmentLayer[EnvironmentLayer["Humidity"] = 1] = "Humidity";
+    EnvironmentLayer[EnvironmentLayer["SoilMoisture"] = 2] = "SoilMoisture";
+    EnvironmentLayer[EnvironmentLayer["SoilNitrogen"] = 3] = "SoilNitrogen";
+    EnvironmentLayer[EnvironmentLayer["SoilPhosphorus"] = 4] = "SoilPhosphorus";
+    EnvironmentLayer[EnvironmentLayer["SoilPotassium"] = 5] = "SoilPotassium";
+    EnvironmentLayer[EnvironmentLayer["LightIntensity"] = 6] = "LightIntensity";
+    EnvironmentLayer[EnvironmentLayer["WindX"] = 7] = "WindX";
+    EnvironmentLayer[EnvironmentLayer["WindY"] = 8] = "WindY";
+    EnvironmentLayer[EnvironmentLayer["CO2Concentration"] = 9] = "CO2Concentration";
+    EnvironmentLayer[EnvironmentLayer["Elevation"] = 10] = "Elevation";
+    EnvironmentLayer[EnvironmentLayer["Pollution"] = 11] = "Pollution";
+    EnvironmentLayer[EnvironmentLayer["MicrobialActivity"] = 12] = "MicrobialActivity";
+    EnvironmentLayer[EnvironmentLayer["RootDensity"] = 13] = "RootDensity";
+    EnvironmentLayer[EnvironmentLayer["Compaction"] = 14] = "Compaction";
+    EnvironmentLayer[EnvironmentLayer["PHLevel"] = 15] = "PHLevel";
     // 확장된 과학적 파라미터 (Total 21 Layers)
-    EnvLayer[EnvLayer["SoilSalinity"] = 16] = "SoilSalinity";
-    EnvLayer[EnvLayer["OrganicMatter"] = 17] = "OrganicMatter";
-    EnvLayer[EnvLayer["GroundWaterLevel"] = 18] = "GroundWaterLevel";
-    EnvLayer[EnvLayer["UVRadiation"] = 19] = "UVRadiation";
-    EnvLayer[EnvLayer["WindZ"] = 20] = "WindZ"; // 수직 상승 기류 (3D 바람)
-})(EnvLayer || (EnvLayer = {}));
-export { EnvLayer as Layer };
+    EnvironmentLayer[EnvironmentLayer["SoilSalinity"] = 16] = "SoilSalinity";
+    EnvironmentLayer[EnvironmentLayer["OrganicMatter"] = 17] = "OrganicMatter";
+    EnvironmentLayer[EnvironmentLayer["GroundWaterLevel"] = 18] = "GroundWaterLevel";
+    EnvironmentLayer[EnvironmentLayer["UVRadiation"] = 19] = "UVRadiation";
+    EnvironmentLayer[EnvironmentLayer["WindZ"] = 20] = "WindZ"; // 수직 상승 기류 (3D 바람)
+})(EnvironmentLayer || (EnvironmentLayer = {}));
 const CHUNK_SIZE = 256; // 256x256 셀 per Chunk (약 6.5만 셀)
 // 21개 레이어 * 65536셀 * 4byte = 약 5.5MB per Chunk
 export class EnvironmentGrid {
     constructor(width = 7000, height = 7000) {
         this.chunks = new Map();
-        this.layers = 21; // EnvLayer 키 개수
+        this.layers = 21; // EnvironmentLayer 키 개수
         // 전체 월드 크기 (가상)
         // 10억 파라미터 목표: 21 layers * 7000 * 7000 cells ≈ 1.029 Billion parameters
         this.width = 7000;
@@ -148,5 +147,5 @@ export class EnvironmentGrid {
 }
 export var Environment;
 (function (Environment) {
-    Environment.Layer = EnvLayer;
+    Environment.Layer = EnvironmentLayer;
 })(Environment || (Environment = {}));

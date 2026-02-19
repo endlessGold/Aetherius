@@ -4,7 +4,7 @@ import { System } from '../events/eventTypes.js';
 import { BioStateComponent } from '../../components/bioStateComponent.js';
 import { ActionParamsComponent } from '../../components/actionParamsComponent.js';
 import { GoalGAComponent } from '../../components/goalGaComponent.js';
-import { Layer } from '../environment/environmentGrid.js';
+import { EnvironmentLayer } from '../environment/environmentGrid.js';
 
 export class SensorSystem extends BaseSystem {
   private world: World;
@@ -27,10 +27,10 @@ export class SensorSystem extends BaseSystem {
       const ga = node.components.get('GoalGA') as GoalGAComponent | undefined;
       const env = ga
         ? {
-          temperature: this.world.environment.get(ga.state.position.x, ga.state.position.y, Layer.Temperature),
-          humidity: this.world.environment.get(ga.state.position.x, ga.state.position.y, Layer.Humidity),
-          light: this.world.environment.get(ga.state.position.x, ga.state.position.y, Layer.LightIntensity),
-          soilMoisture: this.world.environment.get(ga.state.position.x, ga.state.position.y, Layer.SoilMoisture)
+          temperature: this.world.environment.get(ga.state.position.x, ga.state.position.y, EnvironmentLayer.Temperature),
+          humidity: this.world.environment.get(ga.state.position.x, ga.state.position.y, EnvironmentLayer.Humidity),
+          light: this.world.environment.get(ga.state.position.x, ga.state.position.y, EnvironmentLayer.LightIntensity),
+          soilMoisture: this.world.environment.get(ga.state.position.x, ga.state.position.y, EnvironmentLayer.SoilMoisture)
         }
         : undefined;
 

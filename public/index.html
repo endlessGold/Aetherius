@@ -53,6 +53,7 @@
     <script type="module">
       const out = document.getElementById('out');
       const tokenKey = 'aetherius_token';
+      const rolesKey = 'aetherius_roles';
 
       function setOut(obj) {
         out.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
@@ -60,6 +61,23 @@
 
       function getToken() {
         return localStorage.getItem(tokenKey);
+      }
+
+      function setRoles(roles) {
+        if (Array.isArray(roles)) {
+          localStorage.setItem(rolesKey, JSON.stringify(roles));
+        }
+      }
+
+      function getRoles() {
+        const raw = localStorage.getItem(rolesKey);
+        if (!raw) return [];
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
       }
 
       async function api(path, method, body) {
@@ -75,12 +93,16 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         const r = await api('/api/login', 'POST', { username, password });
-        if (r.data && r.data.token) localStorage.setItem(tokenKey, r.data.token);
+        if (r.data && r.data.token) {
+          localStorage.setItem(tokenKey, r.data.token);
+          if (r.data.roles) setRoles(r.data.roles);
+        }
         setOut(r);
       });
 
       document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem(tokenKey);
+        localStorage.removeItem(rolesKey);
         setOut({ ok: true, message: 'logged out' });
       });
 

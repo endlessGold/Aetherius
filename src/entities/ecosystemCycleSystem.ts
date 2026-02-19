@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { AssembleManager } from './assembly.js';
 import { World } from '../core/world.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 import { createEntityByAssemblyWithManager } from './catalog.js';
 import { Biological, System, Interaction } from '../core/events/eventTypes.js';
 
@@ -267,8 +267,8 @@ export class EcosystemCycleSystem {
 
   private computeMigrationUrge(components: any, world: World) {
     const pos = components.position;
-    const temp = world.environment.get(pos.x, pos.y, Layer.Temperature);
-    const moisture = world.environment.get(pos.x, pos.y, Layer.SoilMoisture);
+    const temp = world.environment.get(pos.x, pos.y, EnvironmentLayer.Temperature);
+    const moisture = world.environment.get(pos.x, pos.y, EnvironmentLayer.SoilMoisture);
     const tempStress = this.season.seasonIndex === 3 ? clamp01((10 - temp) / 10) : clamp01((temp - 38) / 8);
     const waterStress = clamp01((10 - moisture) / 10);
     const social = components.goalGA?.genome?.stats?.sociability ?? 0.5;
@@ -312,8 +312,8 @@ export class EcosystemCycleSystem {
       const disease = c.disease;
       const pos = c.position;
 
-      const humidity = world.environment.get(pos.x, pos.y, Layer.Humidity);
-      const temperature = world.environment.get(pos.x, pos.y, Layer.Temperature);
+      const humidity = world.environment.get(pos.x, pos.y, EnvironmentLayer.Humidity);
+      const temperature = world.environment.get(pos.x, pos.y, EnvironmentLayer.Temperature);
 
       if (disease.status === 'S') {
         const neighbors = this.queryNeighbors(pos, 3);
@@ -565,9 +565,9 @@ export class EcosystemCycleSystem {
     for (const corpse of corpses) {
       const c = (corpse.children[0] as any).components;
       const pos = c.position;
-      const temp = world.environment.get(pos.x, pos.y, Layer.Temperature);
-      const humidity = world.environment.get(pos.x, pos.y, Layer.Humidity);
-      const moisture = world.environment.get(pos.x, pos.y, Layer.SoilMoisture);
+      const temp = world.environment.get(pos.x, pos.y, EnvironmentLayer.Temperature);
+      const humidity = world.environment.get(pos.x, pos.y, EnvironmentLayer.Humidity);
+      const moisture = world.environment.get(pos.x, pos.y, EnvironmentLayer.SoilMoisture);
 
       const baseRate = 0.015;
       const tempFactor = clamp01((temp - 5) / 30);
@@ -588,9 +588,9 @@ export class EcosystemCycleSystem {
       const organicMatter = delta * 0.6;
       const microbial = delta * 0.05;
 
-      world.environment.add(pos.x, pos.y, Layer.SoilNitrogen, n);
-      world.environment.add(pos.x, pos.y, Layer.OrganicMatter, organicMatter);
-      world.environment.add(pos.x, pos.y, Layer.MicrobialActivity, microbial);
+      world.environment.add(pos.x, pos.y, EnvironmentLayer.SoilNitrogen, n);
+      world.environment.add(pos.x, pos.y, EnvironmentLayer.OrganicMatter, organicMatter);
+      world.environment.add(pos.x, pos.y, EnvironmentLayer.MicrobialActivity, microbial);
 
       world.eventBus.publish(new Biological.DecompositionApplied(corpse.id, { x: pos.x, y: pos.y }, { n, organicMatter, microbial }, 'EcosystemCycleSystem'));
 

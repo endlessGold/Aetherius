@@ -1,6 +1,6 @@
 import { BehaviorNode, SystemEvent, Entity, UpdateContext } from './assembly.js';
 import { WeatherData, PlantData, CreatureData, DroneData, CorpseData } from '../components/entityData.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 import { photosynthesis, absorbWater, metabolism, randomWalk, agingProcess, keepBounds, wildfire, floodDamage, huntPrey } from './behaviorFunctions.js';
 import { universeRegistry } from '../core/space/universeRegistry.js';
 import { promises as fs } from 'fs';
@@ -102,9 +102,9 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
         const c = this.components;
         const env = context.world.environment;
 
-        const temperature = env.get(c.position.x, c.position.y, Layer.Temperature);
-        const moisture = env.get(c.position.x, c.position.y, Layer.SoilMoisture);
-        const light = env.get(c.position.x, c.position.y, Layer.LightIntensity);
+        const temperature = env.get(c.position.x, c.position.y, EnvironmentLayer.Temperature);
+        const moisture = env.get(c.position.x, c.position.y, EnvironmentLayer.SoilMoisture);
+        const light = env.get(c.position.x, c.position.y, EnvironmentLayer.LightIntensity);
 
         const handle = universeRegistry.getWorld(context.world.id);
         const entities = handle?.manager.entities ?? [];
@@ -155,15 +155,15 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
 
         const mode = c.mission.mode;
         if (mode === 'irrigate') {
-            env.add(c.position.x, c.position.y, Layer.SoilMoisture, 2);
+            env.add(c.position.x, c.position.y, EnvironmentLayer.SoilMoisture, 2);
             return;
         }
         if (mode === 'cool') {
-            env.add(c.position.x, c.position.y, Layer.Temperature, -1);
+            env.add(c.position.x, c.position.y, EnvironmentLayer.Temperature, -1);
             return;
         }
         if (mode === 'heat') {
-            env.add(c.position.x, c.position.y, Layer.Temperature, 1);
+            env.add(c.position.x, c.position.y, EnvironmentLayer.Temperature, 1);
             return;
         }
         if (mode === 'seed_place') {

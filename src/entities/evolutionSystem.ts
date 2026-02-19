@@ -4,7 +4,7 @@ import { CreatureEntity, CreatureBehavior } from './behaviors.js';
 import { CreatureData } from '../components/entityData.js';
 import { GoalGAState, GoalGenome, GoalKind } from '../components/goalGaComponent.js';
 import { PRNG, hashStringToSeed } from '../ai/prng.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 
 type Candidate = { node: BehaviorNode<CreatureData>; fitness: number };
 type OffspringAgg = { sumFitness: number; count: number };
@@ -179,11 +179,11 @@ export class EvolutionSystem {
 
   private sampleEnvironment(world: World, x: number, y: number) {
     const grid = world.environment;
-    const temperature = grid.get(x, y, Layer.Temperature);
-    const humidity = grid.get(x, y, Layer.Humidity);
-    const soilMoisture = grid.get(x, y, Layer.SoilMoisture);
-    const light = grid.get(x, y, Layer.LightIntensity);
-    const nitrogen = grid.get(x, y, Layer.SoilNitrogen);
+    const temperature = grid.get(x, y, EnvironmentLayer.Temperature);
+    const humidity = grid.get(x, y, EnvironmentLayer.Humidity);
+    const soilMoisture = grid.get(x, y, EnvironmentLayer.SoilMoisture);
+    const light = grid.get(x, y, EnvironmentLayer.LightIntensity);
+    const nitrogen = grid.get(x, y, EnvironmentLayer.SoilNitrogen);
     return { temperature, humidity, soilMoisture, light, nitrogen };
   }
 

@@ -1,6 +1,6 @@
 import type { World } from '../world.js';
 import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
-import { Layer } from '../environment/environmentGrid.js';
+import { EnvironmentLayer } from '../environment/environmentGrid.js';
 import { Environment } from '../events/eventTypes.js';
 
 export class AutoGodSystem {
@@ -86,8 +86,8 @@ export class AutoGodSystem {
 
     // Env samples (center)
     const grid = this.world.environment;
-    const centerT = grid.get(50, 50, Layer.Temperature);
-    const centerM = grid.get(50, 50, Layer.SoilMoisture);
+    const centerT = grid.get(50, 50, EnvironmentLayer.Temperature);
+    const centerM = grid.get(50, 50, EnvironmentLayer.SoilMoisture);
 
     return {
       tick: this.world.tickCount,
@@ -118,7 +118,7 @@ export class AutoGodSystem {
         // Reuse logic via command handler style or direct implementation?
         // For now, direct implementation for simplicity
         if (decision.target) {
-          this.world.environment.add(decision.target.x, decision.target.y, Layer.Temperature, 100);
+          this.world.environment.add(decision.target.x, decision.target.y, EnvironmentLayer.Temperature, 100);
           console.log(`⚡ [AUTO GOD] Smited location (${decision.target.x}, ${decision.target.y})`);
         }
         break;
@@ -130,7 +130,7 @@ export class AutoGodSystem {
         console.log(`✨ [AUTO GOD] Blessed the world.`);
         break;
       case 'flood':
-        this.world.eventBus.publish(new Environment.GlobalParameterChange(Layer.SoilMoisture, 0.5, 'AutoGodSystem'));
+        this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvironmentLayer.SoilMoisture, 0.5, 'AutoGodSystem'));
         console.log(`🌊 [AUTO GOD] Brought the rain.`);
         break;
       case 'none':

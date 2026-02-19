@@ -2,7 +2,7 @@
 // 메모리 효율성을 위해 TypedArray(Float32Array)를 사용합니다.
 // Chunk 시스템을 도입하여 10억 개(1 Billion) 이상의 파라미터를 처리할 수 있는 구조를 구현합니다.
 
-export enum EnvLayer {
+export enum EnvironmentLayer {
   Temperature = 0,    // 온도 (Celsius)
   Humidity = 1,       // 습도 (0.0 ~ 1.0)
   SoilMoisture = 2,   // 토양 수분 (0.0 ~ 1.0)
@@ -28,14 +28,12 @@ export enum EnvLayer {
   WindZ = 20          // 수직 상승 기류 (3D 바람)
 }
 
-export { EnvLayer as Layer };
-
 const CHUNK_SIZE = 256; // 256x256 셀 per Chunk (약 6.5만 셀)
 // 21개 레이어 * 65536셀 * 4byte = 약 5.5MB per Chunk
 
-export class Grid {
+export class EnvironmentGrid {
   private chunks: Map<string, Float32Array> = new Map();
-  private readonly layers: number = 21; // EnvLayer 키 개수
+  private readonly layers: number = 21; // EnvironmentLayer 키 개수
 
   // 전체 월드 크기 (가상)
   // 10억 파라미터 목표: 21 layers * 7000 * 7000 cells ≈ 1.029 Billion parameters
@@ -89,7 +87,7 @@ export class Grid {
   }
 
   // 값 읽기
-  get(x: number, y: number, layer: EnvLayer): number {
+  get(x: number, y: number, layer: EnvironmentLayer): number {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
     const chunk = this.getChunk(cx, cy, true); // Read-only
     if (!chunk) return 0; // 빈 공간은 0 (기본값)
@@ -97,14 +95,14 @@ export class Grid {
   }
 
   // 값 쓰기
-  set(x: number, y: number, layer: EnvLayer, value: number): void {
+  set(x: number, y: number, layer: EnvironmentLayer, value: number): void {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
     const chunk = this.getChunk(cx, cy, false); // Create if needed
     if (chunk) chunk[localIndexBase + layer] = value;
   }
 
   // 값 더하기 (Delta 적용)
-  add(x: number, y: number, layer: EnvLayer, delta: number): void {
+  add(x: number, y: number, layer: EnvironmentLayer, delta: number): void {
     const { cx, cy, localIndexBase } = this.getLocation(x, y);
     const chunk = this.getChunk(cx, cy, false); // Create if needed
     if (chunk) chunk[localIndexBase + layer] += delta;
@@ -121,7 +119,7 @@ export class Grid {
 
   // 특정 영역의 평균값 계산 (최적화 필요: 경계면 Chunk 처리 복잡함)
   // 현재는 단순 구현으로 get()을 반복 호출
-  getRegionAverage(centerX: number, centerY: number, radius: number, layer: EnvLayer): number {
+  getRegionAverage(centerX: number, centerY: number, radius: number, layer: EnvironmentLayer): number {
     let sum = 0;
     let count = 0;
     // 간단한 사각형 범위 순회로 근사 (원형 검사는 비용이 큼)
@@ -137,7 +135,7 @@ export class Grid {
   }
 
   // 전체 통계 (현재 로드된 청크만 계산)
-  getStatistics(layer: EnvLayer) {
+  getStatistics(layer: EnvironmentLayer) {
     let min = Infinity;
     let max = -Infinity;
     let sum = 0;
@@ -165,7 +163,7 @@ export class Grid {
 }
 
 export namespace Environment {
-  export const Layer = EnvLayer;
-  export type Layer = EnvLayer;
-  export type Grid = Grid;
+  export const Layer = EnvironmentLayer;
+  export type Layer = EnvironmentLayer;
+  export type Grid = EnvironmentGrid;
 }

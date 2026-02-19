@@ -14,9 +14,9 @@ function timingSafeEqual(a, b) {
   return crypto.timingSafeEqual(ab, bb);
 }
 
-export async function issueToken(subject) {
+export async function issueToken(subject, roles = ['player']) {
   const secret = getSecret();
-  return new SignJWT({ sub: subject })
+  return new SignJWT({ sub: subject, roles })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('12h')
@@ -31,7 +31,7 @@ export async function verifyRequest(req) {
   try {
     const secret = getSecret();
     const { payload } = await jwtVerify(token, secret);
-    return { ok: true, subject: payload.sub || 'user' };
+    return { ok: true, subject: payload.sub || 'user', roles: payload.roles || ['player'] };
   } catch {
     return { ok: false, status: 401, message: 'Invalid token' };
   }
@@ -43,4 +43,3 @@ export function verifyPassword(username, password) {
   if (!expectedPass) throw new Error('AETHERIUS_AUTH_PASSWORD is not set');
   return timingSafeEqual(username, expectedUser) && timingSafeEqual(password, expectedPass);
 }
-

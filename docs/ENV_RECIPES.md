@@ -1,6 +1,6 @@
 # 환경 조합법 쉽게 이해하기
 
-이 문서는 초등학생도 이해할 수 있게, “환경 조합법(Recipe)”을 아주 쉽게 설명해요.
+이 문서는 누구나 이해할 수 있게, “환경 조합법(Recipe)”을 아주 쉽게 설명해요.
 
 ## 환경 조합법이란?
 - 땅과 공기의 **상태를 섞는 레시피**예요.
@@ -32,3 +32,18 @@
 
 ## 더 알고 싶다면
 - README의 [환경 그리드](../README.md#23-환경-그리드-environment-grid)를 읽어보세요.
+
+## 개발자가 보는 구조 (요약)
+- **레시피 정의**: `src/core/environment/environmentRecipes.ts`
+  - `EnvironmentRecipeId` 타입과 여러 기본 레시피(숲, 사막, 고산, 습지 등)를 정의해요.
+  - 각 레시피는 `EnvironmentLayer`별 기본 값을 들고 있어요.
+- **장소가 레시피를 들고 있음**:
+  - `src/components/entityData.ts` → `PlaceData.environmentRecipeId`
+  - `src/core/maze/placeNode.ts` → `PlaceComponent`가 기본값으로 `'forest'`를 사용해요.
+- **장소 생성 시 레시피 적용**:
+  - `src/core/maze/mazeNetwork.ts` → `MazeSystem`이 `createNode`로 Place를 만들고,
+    `applyPlaceEnvironment`를 통해 `NatureSystem`에 레시피 적용을 요청해요.
+- **레시피가 실제 그리드에 뿌려지는 곳**:
+  - `src/core/environment/natureSystem.ts`
+    - `initializeWorld(recipeId)`에서 시작 구역 전체를 하나의 레시피 기반으로 초기화해요.
+    - `applyRecipeAt(x, y, recipeId, radius)`에서 특정 장소 주변에 레시피를 원형 영역으로 적용해요.

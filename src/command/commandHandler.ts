@@ -1,6 +1,6 @@
 import { World } from '../core/world.js';
 import { createEntityByAssemblyWithManager } from '../entities/catalog.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 import { Environment, System } from '../core/events/eventTypes.js';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -238,11 +238,11 @@ export class CommandHandler {
     }
     const grid = this.world.environment;
     const data = {
-      Temperature: grid.get(x, y, Layer.Temperature).toFixed(2) + "°C",
-      Humidity: (grid.get(x, y, Layer.Humidity) * 100).toFixed(1) + "%",
-      SoilMoisture: (grid.get(x, y, Layer.SoilMoisture) * 100).toFixed(1) + "%",
-      Nitrogen: grid.get(x, y, Layer.SoilNitrogen).toFixed(2),
-      Light: grid.get(x, y, Layer.LightIntensity).toFixed(0) + " Lux"
+      Temperature: grid.get(x, y, EnvironmentLayer.Temperature).toFixed(2) + "°C",
+      Humidity: (grid.get(x, y, EnvironmentLayer.Humidity) * 100).toFixed(1) + "%",
+      SoilMoisture: (grid.get(x, y, EnvironmentLayer.SoilMoisture) * 100).toFixed(1) + "%",
+      Nitrogen: grid.get(x, y, EnvironmentLayer.SoilNitrogen).toFixed(2),
+      Light: grid.get(x, y, EnvironmentLayer.LightIntensity).toFixed(0) + " Lux"
     };
     return { success: true, message: `Environment at (${x}, ${y}):`, data };
   }
@@ -281,8 +281,8 @@ export class CommandHandler {
     const y = parseFloat(args[1]);
     const radius = parseFloat(args[2]) || 5;
     if (isNaN(x) || isNaN(y)) return { success: false, message: "Usage: smite <x> <y> [radius]" };
-    this.world.environment.add(x, y, Layer.Temperature, 100);
-    this.world.environment.add(x, y, Layer.SoilMoisture, -50);
+    this.world.environment.add(x, y, EnvironmentLayer.Temperature, 100);
+    this.world.environment.add(x, y, EnvironmentLayer.SoilMoisture, -50);
     let killCount = 0;
     this.getManager().entities.forEach((entity: { children?: Array<{ components?: { position?: { x: number; y: number }; vitality?: { hp: number } } }> }) => {
       const behavior = entity.children?.[0];
@@ -308,7 +308,7 @@ export class CommandHandler {
   }
 
   private handleFlood(args: string[]): CommandResult {
-    this.world.eventBus.publish(new Environment.GlobalParameterChange(Layer.SoilMoisture, 0.5, 'CommandHandler'));
+    this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvironmentLayer.SoilMoisture, 0.5, 'CommandHandler'));
     const waterLevel = parseFloat(args[0]) || 80;
     const grid = this.world.environment;
     let drownedCount = 0;
@@ -316,14 +316,14 @@ export class CommandHandler {
       const behavior = entity.children?.[0];
       const c = behavior?.components;
       if (!c?.vitality || !c?.position) return;
-      const moisture = grid.get(c.position.x, c.position.y, Layer.SoilMoisture);
+      const moisture = grid.get(c.position.x, c.position.y, EnvironmentLayer.SoilMoisture);
       if (moisture > waterLevel && this.world.random01() < 0.7) { c.vitality.hp = 0; drownedCount++; }
     });
     return { success: true, message: `THE GREAT FLOOD! Water covers the earth. ${drownedCount} land-dwellers have drowned.` };
   }
 
   private handleIceAge(_args: string[]): CommandResult {
-    this.world.eventBus.publish(new Environment.GlobalParameterChange(Layer.Temperature, -5, 'CommandHandler'));
+    this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvironmentLayer.Temperature, -5, 'CommandHandler'));
     let frozenCount = 0;
     this.getManager().entities.forEach((entity: { children?: Array<{ components?: { vitality?: { hp: number } } }> }) => {
       const c = entity.children?.[0]?.components;
@@ -337,7 +337,7 @@ export class CommandHandler {
     const y = parseFloat(args[1]);
     if (isNaN(x) || isNaN(y)) return { success: false, message: "Usage: meteor <x> <y>" };
     const radius = 15;
-    this.world.environment.add(x, y, Layer.Temperature, 500);
+    this.world.environment.add(x, y, EnvironmentLayer.Temperature, 500);
     let obliterated = 0;
     this.getManager().entities.forEach((entity: { children?: Array<{ components?: { position?: { x: number; y: number }; vitality?: { hp: number } } }> }) => {
       const c = entity.children?.[0]?.components;
@@ -559,7 +559,7 @@ Available divine actions (you may recommend these; one command per line in Recom
       `Population: entities=${entities.length} places=${places} plants=${plants} creatures=${creatures}`,
       `AvgStats: hp=${counted ? (totalHp / counted).toFixed(2) : 'n/a'} energy=${counted ? (totalEnergy / counted).toFixed(2) : 'n/a'}`,
       `Maze: nodes=${nodeCount} edges=${Math.floor(edgeCount)}`,
-      `Env(center): temp=${env.get(50, 50, Layer.Temperature).toFixed(2)} moisture=${env.get(50, 50, Layer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, Layer.LightIntensity).toFixed(2)}`,
+      `Env(center): temp=${env.get(50, 50, EnvironmentLayer.Temperature).toFixed(2)} moisture=${env.get(50, 50, EnvironmentLayer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, EnvironmentLayer.LightIntensity).toFixed(2)}`,
       divineActions.trim(),
       assemblyTypes
     ].join('\n');
@@ -787,24 +787,24 @@ Available divine actions (you may recommend these; one command per line in Recom
       return { success: false, message: 'Usage: modify_terrain <x> <y> <radius> <layer> <value>' };
     }
 
-    let layer: Layer | undefined;
+    let layer: EnvironmentLayer | undefined;
     switch (layerName) {
-      case 'temp': case 'temperature': layer = Layer.Temperature; break;
-      case 'humidity': layer = Layer.Humidity; break;
-      case 'moisture': case 'soil_moisture': layer = Layer.SoilMoisture; break;
-      case 'elevation': case 'height': layer = Layer.Elevation; break;
-      case 'nitrogen': layer = Layer.SoilNitrogen; break;
-      case 'phosphorus': layer = Layer.SoilPhosphorus; break;
-      case 'potassium': layer = Layer.SoilPotassium; break;
-      case 'light': layer = Layer.LightIntensity; break;
-      case 'co2': layer = Layer.CO2Concentration; break;
-      case 'pollution': layer = Layer.Pollution; break;
-      case 'compaction': layer = Layer.Compaction; break;
-      case 'ph': layer = Layer.PHLevel; break;
-      case 'salinity': layer = Layer.SoilSalinity; break;
-      case 'organic': layer = Layer.OrganicMatter; break;
-      case 'groundwater': layer = Layer.GroundWaterLevel; break;
-      case 'uv': layer = Layer.UVRadiation; break;
+      case 'temp': case 'temperature': layer = EnvironmentLayer.Temperature; break;
+      case 'humidity': layer = EnvironmentLayer.Humidity; break;
+      case 'moisture': case 'soil_moisture': layer = EnvironmentLayer.SoilMoisture; break;
+      case 'elevation': case 'height': layer = EnvironmentLayer.Elevation; break;
+      case 'nitrogen': layer = EnvironmentLayer.SoilNitrogen; break;
+      case 'phosphorus': layer = EnvironmentLayer.SoilPhosphorus; break;
+      case 'potassium': layer = EnvironmentLayer.SoilPotassium; break;
+      case 'light': layer = EnvironmentLayer.LightIntensity; break;
+      case 'co2': layer = EnvironmentLayer.CO2Concentration; break;
+      case 'pollution': layer = EnvironmentLayer.Pollution; break;
+      case 'compaction': layer = EnvironmentLayer.Compaction; break;
+      case 'ph': layer = EnvironmentLayer.PHLevel; break;
+      case 'salinity': layer = EnvironmentLayer.SoilSalinity; break;
+      case 'organic': layer = EnvironmentLayer.OrganicMatter; break;
+      case 'groundwater': layer = EnvironmentLayer.GroundWaterLevel; break;
+      case 'uv': layer = EnvironmentLayer.UVRadiation; break;
     }
 
     if (layer === undefined) {

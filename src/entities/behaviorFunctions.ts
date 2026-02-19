@@ -1,6 +1,6 @@
 import { BehaviorNode, UpdateContext } from './assembly.js';
 import { PlantData, CreatureData } from '../components/entityData.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 
 // ======================================================
 // Behavior Function Library
@@ -11,7 +11,7 @@ import { Layer } from '../core/environment/environmentGrid.js';
 // Photosynthesis: Generates energy from light
 export function photosynthesis(node: BehaviorNode<PlantData & { energy?: { energy: number } }>, context: UpdateContext): void {
   const components = node.components;
-  const light = context.world.environment.get(components.position.x, components.position.y, Layer.LightIntensity);
+  const light = context.world.environment.get(components.position.x, components.position.y, EnvironmentLayer.LightIntensity);
 
   if (light > 50 && components.energy) {
     components.energy.energy += 0.1 * context.deltaTime;
@@ -58,10 +58,10 @@ export function keepBounds<T extends { position: { x: number; y: number } }>(nod
 // Absorb Water: Absorbs soil moisture to recover HP
 export function absorbWater(node: BehaviorNode<PlantData>, context: UpdateContext): void {
   const components = node.components;
-  const moisture = context.world.environment.get(components.position.x, components.position.y, Layer.SoilMoisture);
+  const moisture = context.world.environment.get(components.position.x, components.position.y, EnvironmentLayer.SoilMoisture);
 
   if (moisture > 20) {
-    context.world.environment.add(components.position.x, components.position.y, Layer.SoilMoisture, -0.1);
+    context.world.environment.add(components.position.x, components.position.y, EnvironmentLayer.SoilMoisture, -0.1);
     components.vitality.hp = Math.min(100, components.vitality.hp + 0.1);
   }
 }
@@ -71,8 +71,8 @@ export function absorbWater(node: BehaviorNode<PlantData>, context: UpdateContex
 // Wildfire: Burns if temperature is high and moisture is low
 export function wildfire(node: BehaviorNode<PlantData>, context: UpdateContext): void {
   const components = node.components;
-  const temp = context.world.environment.get(components.position.x, components.position.y, Layer.Temperature);
-  const moisture = context.world.environment.get(components.position.x, components.position.y, Layer.SoilMoisture);
+  const temp = context.world.environment.get(components.position.x, components.position.y, EnvironmentLayer.Temperature);
+  const moisture = context.world.environment.get(components.position.x, components.position.y, EnvironmentLayer.SoilMoisture);
 
   // Ignition condition: High temp (>35) & Low moisture (<10)
   if (temp > 35 && moisture < 10) {
@@ -82,7 +82,7 @@ export function wildfire(node: BehaviorNode<PlantData>, context: UpdateContext):
       components.vitality.hp -= 20 * context.deltaTime;
 
       // Heat up surrounding area
-      context.world.environment.add(components.position.x, components.position.y, Layer.Temperature, 5);
+      context.world.environment.add(components.position.x, components.position.y, EnvironmentLayer.Temperature, 5);
 
       // Save Event
       context.world.persistence.saveWorldEvent({
@@ -101,7 +101,7 @@ export function wildfire(node: BehaviorNode<PlantData>, context: UpdateContext):
 // Flood: Damages if too much water
 export function floodDamage(node: BehaviorNode<any>, context: UpdateContext): void {
   const components = node.components;
-  const moisture = context.world.environment.get(components.position.x, components.position.y, Layer.SoilMoisture);
+  const moisture = context.world.environment.get(components.position.x, components.position.y, EnvironmentLayer.SoilMoisture);
 
   if (moisture > 90 && components.vitality) {
     if (context.world.random01() < 0.05) {

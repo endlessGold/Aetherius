@@ -19,10 +19,20 @@ export default async function handler(req, res) {
       return;
     }
 
-    const token = await issueToken(username);
-    res.status(200).json({ success: true, token });
+    const roles = resolveRoles(username);
+    const token = await issueToken(username, roles);
+    res.status(200).json({ success: true, token, roles });
   } catch (e) {
     res.status(500).json({ success: false, message: String(e?.message || e) });
   }
 }
 
+function resolveRoles(username) {
+  if (username === 'admin') {
+    return ['player', 'developer', 'system'];
+  }
+  if (username === 'dev') {
+    return ['player', 'developer'];
+  }
+  return ['player'];
+}

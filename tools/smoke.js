@@ -80,7 +80,7 @@ async function runEcosystem() {
   const { AssembleManager } = await distImport('entities/assembly.js');
   const { createEntityByAssemblyWithManager } = await distImport('entities/catalog.js');
   const { EcosystemCycleSystem } = await distImport('entities/ecosystemCycleSystem.js');
-  const { EnvLayer } = await distImport('core/environment/environmentGrid.js');
+  const { Environment } = await distImport('core/environment/environmentGrid.js');
 
   process.env.AETHERIUS_SEASON_TICKS = '12';
 
@@ -122,7 +122,7 @@ async function runEcosystem() {
     ? world.environment.get(
         firstCorpse.children[0].components.position.x,
         firstCorpse.children[0].components.position.y,
-        EnvLayer.SoilNitrogen
+        Environment.Layer.SoilNitrogen
       )
     : 0;
 
@@ -140,7 +140,7 @@ async function runDrone() {
   const { World } = await distImport('core/world.js');
   const { AssembleManager } = await distImport('entities/assembly.js');
   const { createEntityByAssemblyWithManager } = await distImport('entities/catalog.js');
-  const { EnvLayer } = await distImport('core/environment/environmentGrid.js');
+  const { Environment } = await distImport('core/environment/environmentGrid.js');
 
   const manager = new AssembleManager();
   const world = new World('Alpha');
@@ -164,7 +164,7 @@ async function runDrone() {
     manager.update();
   }
 
-  const moisture = world.environment.get(c.position.x, c.position.y, EnvLayer.SoilMoisture);
+  const moisture = world.environment.get(c.position.x, c.position.y, Environment.Layer.SoilMoisture);
   const ok = Number.isFinite(c.energy.energy);
   log('drone', ok ? `ok energy=${c.energy.energy} moisture=${moisture}` : 'fail');
   return ok;

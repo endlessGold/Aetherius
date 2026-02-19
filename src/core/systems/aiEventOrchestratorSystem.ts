@@ -1,7 +1,7 @@
 import type { World } from '../world.js';
 import { BaseSystem } from './baseSystem.js';
 import { EventCategory, Environment, System, Command, Biological, Interaction, Simulation } from '../events/eventTypes.js';
-import { Layer } from '../environment/environmentGrid.js';
+import { EnvironmentLayer } from '../environment/environmentGrid.js';
 import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
@@ -105,9 +105,9 @@ export class AIEventOrchestratorSystem extends BaseSystem {
       : 0;
 
     const env = this.world.environment;
-    const temp = env.get(50, 50, Layer.Temperature);
-    const moisture = env.get(50, 50, Layer.SoilMoisture);
-    const light = env.get(50, 50, Layer.LightIntensity);
+    const temp = env.get(50, 50, EnvironmentLayer.Temperature);
+    const moisture = env.get(50, 50, EnvironmentLayer.SoilMoisture);
+    const light = env.get(50, 50, EnvironmentLayer.LightIntensity);
 
     return [
       `Tick=${this.world.tickCount}`,
@@ -136,7 +136,7 @@ ${JSON.stringify(recent.reverse(), null, 2)}
 
 Allowed actions:
 - none
-- env_global_delta: apply Environment.GlobalParameterChange(layer, delta). layer is an EnvLayer integer.
+- env_global_delta: apply Environment.GlobalParameterChange(layer, delta). layer is an EnvironmentLayer index.
 - spawn_entity: publish Command.EntityCreateRequested(id, assemblyType). Choose assemblyType from: Plant_Species_001, Creature_Type_001.
 - spawn_place_near: create a new Place by calling world.mazeSystem.network.createNode(x,y).
 - message: publish Interaction.Communicate(message).

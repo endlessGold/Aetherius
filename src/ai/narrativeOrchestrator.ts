@@ -4,7 +4,7 @@
  */
 
 import type { World } from '../core/world.js';
-import { Layer } from '../core/environment/environmentGrid.js';
+import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 import { createDefaultLLMService } from './llmService.js';
 import { HistorianAgent, ChroniclerAgent, StorytellerAgent } from './agents/narrativeAgents.js';
 
@@ -41,7 +41,7 @@ function buildCurrentSummary(world: World): string {
     `Population: entities=${entities.length} places=${places} plants=${plants} creatures=${creatures}`,
     `AvgStats: hp=${counted ? (totalHp / counted).toFixed(2) : 'n/a'} energy=${counted ? (totalEnergy / counted).toFixed(2) : 'n/a'}`,
     `Maze: nodes=${nodeCount} edges=${Math.floor(edgeCount)}`,
-    `Env(center): temp=${env.get(50, 50, Layer.Temperature).toFixed(2)} moisture=${env.get(50, 50, Layer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, Layer.LightIntensity).toFixed(2)}`
+    `Env(center): temp=${env.get(50, 50, EnvironmentLayer.Temperature).toFixed(2)} moisture=${env.get(50, 50, EnvironmentLayer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, EnvironmentLayer.LightIntensity).toFixed(2)}`
   ].join('\n');
 }
 
