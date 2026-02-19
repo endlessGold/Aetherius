@@ -19,7 +19,7 @@ export enum EnvLayer {
   RootDensity = 13,   // 뿌리 밀도
   Compaction = 14,    // 토양 다짐도
   PHLevel = 15,       // pH 레벨
-  
+
   // 확장된 과학적 파라미터 (Total 21 Layers)
   SoilSalinity = 16,  // 토양 염분
   OrganicMatter = 17, // 유기물 함량
@@ -28,13 +28,15 @@ export enum EnvLayer {
   WindZ = 20          // 수직 상승 기류 (3D 바람)
 }
 
+export { EnvLayer as Layer };
+
 const CHUNK_SIZE = 256; // 256x256 셀 per Chunk (약 6.5만 셀)
 // 21개 레이어 * 65536셀 * 4byte = 약 5.5MB per Chunk
 
-export class EnvironmentGrid {
+export class Grid {
   private chunks: Map<string, Float32Array> = new Map();
   private readonly layers: number = 21; // EnvLayer 키 개수
-  
+
   // 전체 월드 크기 (가상)
   // 10억 파라미터 목표: 21 layers * 7000 * 7000 cells ≈ 1.029 Billion parameters
   width: number = 7000;
@@ -58,7 +60,7 @@ export class EnvironmentGrid {
     const key = this.getChunkKey(cx, cy);
     if (!this.chunks.has(key)) {
       if (readOnly) return undefined;
-      
+
       // SharedArrayBuffer를 사용하면 Worker 스레드와 공유 가능 (확장성 고려)
       // 여기서는 표준 Float32Array 사용
       const buffer = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * this.layers);
@@ -76,7 +78,7 @@ export class EnvironmentGrid {
 
     const cx = Math.floor(gx / CHUNK_SIZE);
     const cy = Math.floor(gy / CHUNK_SIZE);
-    
+
     const lx = gx % CHUNK_SIZE;
     const ly = gy % CHUNK_SIZE;
 
@@ -111,10 +113,10 @@ export class EnvironmentGrid {
   // 활성 청크 순회 (최적화된 시뮬레이션 루프용)
   // callback(chunkData, chunkX, chunkY, width, height)
   forEachActiveChunk(callback: (chunk: Float32Array, cx: number, cy: number, w: number, h: number) => void) {
-      for (const [key, chunk] of this.chunks) {
-          const [cx, cy] = key.split(',').map(Number);
-          callback(chunk, cx, cy, CHUNK_SIZE, CHUNK_SIZE);
-      }
+    for (const [key, chunk] of this.chunks) {
+      const [cx, cy] = key.split(',').map(Number);
+      callback(chunk, cx, cy, CHUNK_SIZE, CHUNK_SIZE);
+    }
   }
 
   // 특정 영역의 평균값 계산 (최적화 필요: 경계면 Chunk 처리 복잡함)
@@ -125,7 +127,7 @@ export class EnvironmentGrid {
     // 간단한 사각형 범위 순회로 근사 (원형 검사는 비용이 큼)
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
-        if (dx*dx + dy*dy <= radius*radius) {
+        if (dx * dx + dy * dy <= radius * radius) {
           sum += this.get(centerX + dx, centerY + dy, layer);
           count++;
         }
@@ -142,22 +144,28 @@ export class EnvironmentGrid {
     let count = 0;
 
     for (const chunk of this.chunks.values()) {
-        const size = CHUNK_SIZE * CHUNK_SIZE;
-        for (let i = 0; i < size; i++) {
-            const val = chunk[i * this.layers + layer];
-            if (val < min) min = val;
-            if (val > max) max = val;
-            sum += val;
-            count++;
-        }
+      const size = CHUNK_SIZE * CHUNK_SIZE;
+      for (let i = 0; i < size; i++) {
+        const val = chunk[i * this.layers + layer];
+        if (val < min) min = val;
+        if (val > max) max = val;
+        sum += val;
+        count++;
+      }
     }
-    
-    return count > 0 ? { min, max, avg: sum / count, activeChunks: this.chunks.size } 
-                     : { min: 0, max: 0, avg: 0, activeChunks: 0 };
+
+    return count > 0 ? { min, max, avg: sum / count, activeChunks: this.chunks.size }
+      : { min: 0, max: 0, avg: 0, activeChunks: 0 };
   }
-  
+
   // 현재 활성화된 총 파라미터 수 확인
   getTotalActiveParameters(): number {
-      return this.chunks.size * CHUNK_SIZE * CHUNK_SIZE * this.layers;
+    return this.chunks.size * CHUNK_SIZE * CHUNK_SIZE * this.layers;
   }
+}
+
+export namespace Environment {
+  export const Layer = EnvLayer;
+  export type Layer = EnvLayer;
+  export type Grid = Grid;
 }

@@ -1,7 +1,7 @@
 import type { World } from '../world.js';
 import { BaseSystem } from './baseSystem.js';
 import { EventCategory, Environment, System, Command, Biological, Interaction, Simulation } from '../events/eventTypes.js';
-import { EnvLayer } from '../environment/environmentGrid.js';
+import { Layer } from '../environment/environmentGrid.js';
 import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
@@ -105,9 +105,9 @@ export class AIEventOrchestratorSystem extends BaseSystem {
       : 0;
 
     const env = this.world.environment;
-    const temp = env.get(50, 50, EnvLayer.Temperature);
-    const moisture = env.get(50, 50, EnvLayer.SoilMoisture);
-    const light = env.get(50, 50, EnvLayer.LightIntensity);
+    const temp = env.get(50, 50, Layer.Temperature);
+    const moisture = env.get(50, 50, Layer.SoilMoisture);
+    const light = env.get(50, 50, Layer.LightIntensity);
 
     return [
       `Tick=${this.world.tickCount}`,

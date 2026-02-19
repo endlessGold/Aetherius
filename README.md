@@ -44,7 +44,7 @@ npm start -- --mode server
 
 - **몰입감 (Immersion First)**: 플레이/관찰 관점에서 “그럴듯하게 느껴지는” 세계를 최우선 목표로 둡니다.
 - **고증/가설 혼용 (Grounded + Speculative)**: 검증된 과학 모델도 쓰지만, 세계관을 위해 가상의 법칙/가설을 주입해 실험할 수 있습니다.
-- **대규모 스케일 (Massive Scale)**: 20개 이상의 환경 변수와 10억+ 파라미터(Environment Grid)를 다룰 수 있는 구조.
+- **환경 조합법 10억+**: 온도·수분·빛·바람 등 20가지 이상의 값들을 섞어 만드는 **환경 조합법**이 10억 개 이상 존재합니다. 우리는 마인크래프트처럼 필요한 영역만 똑똑하게 생성하여 렉 없이 운용합니다.
 - **확장성 (Scalability)**: CLI(로컬 테스트)와 웹 서버/Serverless(원격 API) 모드를 동시에 지원.
 - **결정론/재현성 (Determinism)**: 외부 입력이 같으면 결과도 같도록, 상태 변화가 Tick 경계에서 정의되도록 설계.
 
@@ -74,9 +74,15 @@ npm start -- --mode server
   - `/api/tick`은 지정한 tick만큼 즉시 진행(재진입 방지 가드 포함)
 
 ### 2.3 환경 그리드 (Environment Grid)
-- **대규모 스케일 (Massive Scale)**: **10억 개(1 Billion)** 이상의 환경 파라미터를 실시간으로 시뮬레이션하는 것을 목표로 설계됨.
+- **환경 조합법(Recipes)**: 온도/습도/수분/영양/빛/바람 등 레이어를 조합해 **10억+ 가지의 환경 분위기(레시피)**를 만들 수 있습니다. 각 장소(Place 노드)는 특정 레시피(타입 1, 2, 3…)를 선택·혼합하여 자기만의 기후를 갖고, 그 주변 그리드에 적용됩니다.
 - **TypedArray 최적화**: `Float32Array`와 `SharedArrayBuffer`를 사용하여 메모리 효율성과 연산 속도를 극대화.
 - **물리 엔진**: 확산(Diffusion) 및 이류(Advection) 알고리즘을 통해 열, 수분, 영양분의 자연스러운 이동을 시뮬레이션.
+
+#### 2.3.1 환경 조합법 쉽게 이해하기
+- 레시피는 “따뜻하고 촉촉한 숲”, “건조하고 뜨거운 사막”, “추운 고산지대”처럼 값들을 섞은 **기후 프리셋**입니다.
+- **Place 노드**가 레시피를 들고 있고, 주변 땅(그리드)에 그 분위기가 퍼집니다.
+- 값들이 서로 영향을 주며 반응합니다: 덥으면 물이 증발→습도 증가→비가 옴→온도 하락처럼 자연스러운 사이클이 생깁니다.
+- 자세한 설명은 [ENV_RECIPES.md](docs/ENV_RECIPES.md)를 참고하세요.
 
 ### 2.4 도메인 모델 (Domain Model)
 - 이 엔진은 특정 한 분야(예: 생물학)만 목표로 하지 않고, “가상세계”를 구성하는 여러 분야를 Tick 단위로 확장할 수 있게 구성합니다.
@@ -216,7 +222,7 @@ api/            (Vercel) 서버리스 엔드포인트 + JWT 인증
 public/         (Vercel) 브라우저 콘솔 UI
 tools/          smoke.js, run_headless.js(dataset CLI), run_economy_evolution.js 등
 docs/           아키텍처(ARCHITECTURE.md), CLI 사용법(CLI_USAGE.md), DB 호스팅(DB_HOSTING.md),
-                이벤트 정책(EVENT_POLICY.md), 생태 명세(ECONOMY_BIO_SPEC.md), 시크릿(SECRETS_REF.md)
+                이벤트 정책(EVENT_POLICY.md), 생태 명세(ECONOMY_BIO_SPEC.md), 환경 조합법(ENV_RECIPES.md), 시크릿(SECRETS_REF.md)
 ```
 
 ---

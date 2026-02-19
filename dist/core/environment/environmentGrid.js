@@ -26,6 +26,7 @@ export var EnvLayer;
     EnvLayer[EnvLayer["UVRadiation"] = 19] = "UVRadiation";
     EnvLayer[EnvLayer["WindZ"] = 20] = "WindZ"; // 수직 상승 기류 (3D 바람)
 })(EnvLayer || (EnvLayer = {}));
+export { EnvLayer as Layer };
 const CHUNK_SIZE = 256; // 256x256 셀 per Chunk (약 6.5만 셀)
 // 21개 레이어 * 65536셀 * 4byte = 약 5.5MB per Chunk
 export class EnvironmentGrid {
@@ -145,3 +146,7 @@ export class EnvironmentGrid {
         return this.chunks.size * CHUNK_SIZE * CHUNK_SIZE * this.layers;
     }
 }
+export var Environment;
+(function (Environment) {
+    Environment.Layer = EnvLayer;
+})(Environment || (Environment = {}));

@@ -1,6 +1,6 @@
 import type { World } from '../world.js';
 import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
-import { EnvLayer } from '../environment/environmentGrid.js';
+import { Layer } from '../environment/environmentGrid.js';
 import { Environment } from '../events/eventTypes.js';
 
 export class AutoGodSystem {
@@ -31,11 +31,11 @@ export class AutoGodSystem {
   private async decideAndAct() {
     // Gather World State
     const state = this.getWorldState();
-    
+
     // Construct Prompt
     const prompt = `
     You are the AI God of a simulation. Analyze the current state and choose ONE divine intervention.
-    
+
     CURRENT STATE:
     - Tick: ${state.tick}
     - Population: ${state.population} (Plants: ${state.plants}, Creatures: ${state.creatures})
@@ -62,9 +62,9 @@ export class AutoGodSystem {
     const decision = await this.llm.generateDecision(prompt, null);
 
     if (decision) {
-        await this.executeDecision(decision);
+      await this.executeDecision(decision);
     } else {
-        console.log(`🤖 [AUTO GOD] The spirits were silent (LLM Error).`);
+      console.log(`🤖 [AUTO GOD] The spirits were silent (LLM Error).`);
     }
   }
 
@@ -77,66 +77,66 @@ export class AutoGodSystem {
     const count = manager.entities.length;
 
     manager.entities.forEach(e => {
-        const c = (e.children[0] as any).components;
-        if (c.growth) plants++;
-        if (c.goalGA) creatures++;
-        if (c.vitality) totalHp += c.vitality.hp;
-        if (c.energy) totalEnergy += c.energy.energy;
+      const c = (e.children[0] as any).components;
+      if (c.growth) plants++;
+      if (c.goalGA) creatures++;
+      if (c.vitality) totalHp += c.vitality.hp;
+      if (c.energy) totalEnergy += c.energy.energy;
     });
 
     // Env samples (center)
     const grid = this.world.environment;
-    const centerT = grid.get(50, 50, EnvLayer.Temperature);
-    const centerM = grid.get(50, 50, EnvLayer.SoilMoisture);
+    const centerT = grid.get(50, 50, Layer.Temperature);
+    const centerM = grid.get(50, 50, Layer.SoilMoisture);
 
     return {
-        tick: this.world.tickCount,
-        population: count,
-        plants,
-        creatures,
-        avgHp: count > 0 ? totalHp / count : 0,
-        avgEnergy: count > 0 ? totalEnergy / count : 0,
-        avgTemp: centerT,
-        avgMoisture: centerM
+      tick: this.world.tickCount,
+      population: count,
+      plants,
+      creatures,
+      avgHp: count > 0 ? totalHp / count : 0,
+      avgEnergy: count > 0 ? totalEnergy / count : 0,
+      avgTemp: centerT,
+      avgMoisture: centerM
     };
   }
 
   private async executeDecision(decision: any) {
-      console.log(`🤖 [AUTO GOD] Decision: ${decision.action.toUpperCase()} - "${decision.reason}"`);
-      
-      // Save log (Placeholder for DB)
-      this.world.persistence.saveWorldEvent({
-          worldId: this.world.id,
-          tick: this.world.tickCount,
-          type: 'OTHER',
-          location: { x: 0, y: 0 },
-          details: `[AUTO_GOD] ${decision.action}: ${decision.reason}`
-      }).catch(e => {});
+    console.log(`🤖 [AUTO GOD] Decision: ${decision.action.toUpperCase()} - "${decision.reason}"`);
 
-      switch (decision.action) {
-          case 'smite':
-              // Reuse logic via command handler style or direct implementation?
-              // For now, direct implementation for simplicity
-              if (decision.target) {
-                  this.world.environment.add(decision.target.x, decision.target.y, EnvLayer.Temperature, 100);
-                  console.log(`⚡ [AUTO GOD] Smited location (${decision.target.x}, ${decision.target.y})`);
-              }
-              break;
-          case 'bless':
-              this.world.getAssembleManager().entities.forEach(e => {
-                  const c = (e.children[0] as any).components;
-                  if (c.vitality) c.vitality.hp = 100;
-              });
-              console.log(`✨ [AUTO GOD] Blessed the world.`);
-              break;
-          case 'flood':
-               this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvLayer.SoilMoisture, 0.5, 'AutoGodSystem'));
-               console.log(`🌊 [AUTO GOD] Brought the rain.`);
-               break;
-          case 'none':
-          default:
-              console.log(`🍃 [AUTO GOD] Watches silently.`);
-              break;
-      }
+    // Save log (Placeholder for DB)
+    this.world.persistence.saveWorldEvent({
+      worldId: this.world.id,
+      tick: this.world.tickCount,
+      type: 'OTHER',
+      location: { x: 0, y: 0 },
+      details: `[AUTO_GOD] ${decision.action}: ${decision.reason}`
+    }).catch(e => { });
+
+    switch (decision.action) {
+      case 'smite':
+        // Reuse logic via command handler style or direct implementation?
+        // For now, direct implementation for simplicity
+        if (decision.target) {
+          this.world.environment.add(decision.target.x, decision.target.y, Layer.Temperature, 100);
+          console.log(`⚡ [AUTO GOD] Smited location (${decision.target.x}, ${decision.target.y})`);
+        }
+        break;
+      case 'bless':
+        this.world.getAssembleManager().entities.forEach(e => {
+          const c = (e.children[0] as any).components;
+          if (c.vitality) c.vitality.hp = 100;
+        });
+        console.log(`✨ [AUTO GOD] Blessed the world.`);
+        break;
+      case 'flood':
+        this.world.eventBus.publish(new Environment.GlobalParameterChange(Layer.SoilMoisture, 0.5, 'AutoGodSystem'));
+        console.log(`🌊 [AUTO GOD] Brought the rain.`);
+        break;
+      case 'none':
+      default:
+        console.log(`🍃 [AUTO GOD] Watches silently.`);
+        break;
+    }
   }
 }

@@ -1,6 +1,7 @@
 import type { World } from '../world.js';
 import { Place } from './placeNode.js';
 import type { AssembleManager } from '../../entities/assembly.js';
+import type { EnvironmentRecipeId } from '../environment/environmentRecipes.js';
 
 export class MazeNetwork {
     nodes: Map<string, Place> = new Map();
@@ -16,9 +17,9 @@ export class MazeNetwork {
         this.createNode(80, 20, "Oasis");
     }
 
-    createNode(x: number, y: number, name?: string): Place {
+    createNode(x: number, y: number, name?: string, environmentRecipeId?: string): Place {
         const id = `Loc_${this.nextId++}`;
-        const node = new Place(id, name || `Place ${this.nextId}`, x, y);
+        const node = new Place(id, name || `Place ${this.nextId}`, x, y, environmentRecipeId);
         this.nodes.set(id, node);
         
         // Register to AssembleManager so it exists in the world
@@ -96,6 +97,9 @@ export class MazeSystem {
         this.world = world;
         this.manager = world.getAssembleManager();
         this.network = new MazeNetwork(this.manager);
+        for (const node of this.network.nodes.values()) {
+            this.applyPlaceEnvironment(node);
+        }
     }
 
     tick() {
@@ -153,8 +157,14 @@ export class MazeSystem {
                 if (this.world.random01() < 0.05) {
                     const node = this.network.createNode(pos.x, pos.y);
                     console.log(`🏰 New Place Discovered: ${node.data.identity.name} at (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)})`);
+                    this.applyPlaceEnvironment(node);
                 }
             }
         }
+    }
+
+    private applyPlaceEnvironment(place: Place) {
+        const recipeId = (place.data.environmentRecipeId ?? 'forest') as EnvironmentRecipeId;
+        this.world.natureSystem.applyRecipeAt(place.position.x, place.position.y, recipeId, 32);
     }
 }

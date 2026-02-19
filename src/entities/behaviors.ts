@@ -1,6 +1,6 @@
 import { BehaviorNode, SystemEvent, Entity, UpdateContext } from './assembly.js';
 import { WeatherData, PlantData, CreatureData, DroneData, CorpseData } from '../components/entityData.js';
-import { EnvLayer } from '../core/environment/environmentGrid.js';
+import { Layer } from '../core/environment/environmentGrid.js';
 import { photosynthesis, absorbWater, metabolism, randomWalk, agingProcess, keepBounds, wildfire, floodDamage, huntPrey } from './behaviorFunctions.js';
 import { universeRegistry } from '../core/space/universeRegistry.js';
 import { promises as fs } from 'fs';
@@ -88,7 +88,7 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
 
             if (context.world.tickCount - c.camera.lastShotTick >= c.camera.intervalTicks) {
                 c.camera.lastShotTick = context.world.tickCount;
-                this.capture(context).catch(() => {});
+                this.capture(context).catch(() => { });
             }
 
             if (c.intervention.enabled && context.world.tickCount - c.intervention.lastTick >= c.intervention.intervalTicks) {
@@ -102,9 +102,9 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
         const c = this.components;
         const env = context.world.environment;
 
-        const temperature = env.get(c.position.x, c.position.y, EnvLayer.Temperature);
-        const moisture = env.get(c.position.x, c.position.y, EnvLayer.SoilMoisture);
-        const light = env.get(c.position.x, c.position.y, EnvLayer.LightIntensity);
+        const temperature = env.get(c.position.x, c.position.y, Layer.Temperature);
+        const moisture = env.get(c.position.x, c.position.y, Layer.SoilMoisture);
+        const light = env.get(c.position.x, c.position.y, Layer.LightIntensity);
 
         const handle = universeRegistry.getWorld(context.world.id);
         const entities = handle?.manager.entities ?? [];
@@ -155,15 +155,15 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
 
         const mode = c.mission.mode;
         if (mode === 'irrigate') {
-            env.add(c.position.x, c.position.y, EnvLayer.SoilMoisture, 2);
+            env.add(c.position.x, c.position.y, Layer.SoilMoisture, 2);
             return;
         }
         if (mode === 'cool') {
-            env.add(c.position.x, c.position.y, EnvLayer.Temperature, -1);
+            env.add(c.position.x, c.position.y, Layer.Temperature, -1);
             return;
         }
         if (mode === 'heat') {
-            env.add(c.position.x, c.position.y, EnvLayer.Temperature, 1);
+            env.add(c.position.x, c.position.y, Layer.Temperature, 1);
             return;
         }
         if (mode === 'seed_place') {

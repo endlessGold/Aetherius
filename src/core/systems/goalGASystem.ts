@@ -1,7 +1,7 @@
 import { World } from '../world.js';
 import { NodeInterface } from '../interfaces.js';
 import { Entity } from '../node.js';
-import { EnvLayer } from '../environment/environmentGrid.js';
+import { Layer } from '../environment/environmentGrid.js';
 import { GoalGAComponent, GoalKind, GoalGenome } from '../../components/goalGaComponent.js';
 import { PRNG, hashStringToSeed } from '../../ai/prng.js';
 import { NodePool } from '../nodePool.js';
@@ -106,11 +106,11 @@ export class GoalGASystem {
 
   private sampleEnvironment(world: World, x: number, y: number) {
     const grid = world.environment;
-    const temperature = grid.get(x, y, EnvLayer.Temperature);
-    const humidity = grid.get(x, y, EnvLayer.Humidity);
-    const soilMoisture = grid.get(x, y, EnvLayer.SoilMoisture);
-    const light = grid.get(x, y, EnvLayer.LightIntensity);
-    const nitrogen = grid.get(x, y, EnvLayer.SoilNitrogen);
+    const temperature = grid.get(x, y, Layer.Temperature);
+    const humidity = grid.get(x, y, Layer.Humidity);
+    const soilMoisture = grid.get(x, y, Layer.SoilMoisture);
+    const light = grid.get(x, y, Layer.LightIntensity);
+    const nitrogen = grid.get(x, y, Layer.SoilNitrogen);
     return { temperature, humidity, soilMoisture, light, nitrogen };
   }
 
@@ -212,7 +212,7 @@ export class GoalGASystem {
       grow: pick().weights.grow,
       explore: pick().weights.explore
     };
-    
+
     // Crossover stats
     const s = {
       size: pick().stats.size,
@@ -230,60 +230,60 @@ export class GoalGASystem {
   }
 
   private logEvolutionStats(world: World, agents: NodeInterface[]): void {
-      const stats = { survive: 0, grow: 0, explore: 0, fitness: 0, count: 0 };
-      
-      for(const agent of agents) {
-          const comp = agent.components.get('GoalGA') as GoalGAComponent;
-          this.ensureLineage(comp);
-          if (comp.state.lineage.role === 'Offspring') continue;
-          stats.survive += comp.state.genome.weights.survive;
-          stats.grow += comp.state.genome.weights.grow;
-          stats.explore += comp.state.genome.weights.explore;
-          stats.fitness += comp.state.metrics.fitness;
-          stats.count++;
+    const stats = { survive: 0, grow: 0, explore: 0, fitness: 0, count: 0 };
+
+    for (const agent of agents) {
+      const comp = agent.components.get('GoalGA') as GoalGAComponent;
+      this.ensureLineage(comp);
+      if (comp.state.lineage.role === 'Offspring') continue;
+      stats.survive += comp.state.genome.weights.survive;
+      stats.grow += comp.state.genome.weights.grow;
+      stats.explore += comp.state.genome.weights.explore;
+      stats.fitness += comp.state.metrics.fitness;
+      stats.count++;
+    }
+
+    if (stats.count > 0) {
+      // Use console.log with overwrite behavior if possible, but standard log is safer
+      // We will use a visual bar chart style
+      const gen = (world.tickCount / this.evolutionIntervalTicks).toFixed(0);
+      const avgS = stats.survive / stats.count;
+      const avgG = stats.grow / stats.count;
+      const avgE = stats.explore / stats.count;
+      const avgF = stats.fitness / stats.count;
+
+      const bar = (val: number) => '█'.repeat(Math.round(val * 20)).padEnd(20, '░');
+
+      console.log(`\n╔══════════════════════════════════════════════════════════════════╗`);
+      console.log(`║ 🧬 EVOLUTION REPORT | Generation ${gen.padEnd(5)} | Tick ${world.tickCount.toString().padEnd(8)} ║`);
+      console.log(`╠══════════════════════════════════════════════════════════════════╣`);
+      console.log(`║ Survive : ${bar(avgS)} ${(avgS * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`║ Grow    : ${bar(avgG)} ${(avgG * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`║ Explore : ${bar(avgE)} ${(avgE * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`╟──────────────────────────────────────────────────────────────────╢`);
+      console.log(`║ Avg Fitness: ${avgF.toFixed(4).padEnd(52)} ║`);
+      console.log(`╚══════════════════════════════════════════════════════════════════╝`);
+
+      // Save evolution stats to DB
+      world.persistence.saveEvolutionStats({
+        worldId: world.id,
+        generation: parseInt(gen),
+        tick: world.tickCount,
+        avgFitness: avgF,
+        weights: { survive: avgS, grow: avgG, explore: avgE },
+        populationCount: stats.count
+      }).catch(err => console.error("Failed to save evolution stats:", err));
+
+      // Auto-save experiment metadata periodically
+      if (world.tickCount % 1000 === 0) {
+        world.persistence.saveExperimentMetadata({
+          id: `${world.id}_EXP_${new Date().toISOString().split('T')[0]}`,
+          config: { mutationRateBase: 0.05, evolutionInterval: this.evolutionIntervalTicks },
+          startedAt: Date.now(), // Approximate
+          totalGenerations: parseInt(gen)
+        }).catch(err => console.error("Failed to save exp metadata:", err));
       }
-
-      if (stats.count > 0) {
-          // Use console.log with overwrite behavior if possible, but standard log is safer
-          // We will use a visual bar chart style
-          const gen = (world.tickCount / this.evolutionIntervalTicks).toFixed(0);
-          const avgS = stats.survive/stats.count;
-          const avgG = stats.grow/stats.count;
-          const avgE = stats.explore/stats.count;
-          const avgF = stats.fitness/stats.count;
-
-          const bar = (val: number) => '█'.repeat(Math.round(val * 20)).padEnd(20, '░');
-          
-          console.log(`\n╔══════════════════════════════════════════════════════════════════╗`);
-          console.log(`║ 🧬 EVOLUTION REPORT | Generation ${gen.padEnd(5)} | Tick ${world.tickCount.toString().padEnd(8)} ║`);
-          console.log(`╠══════════════════════════════════════════════════════════════════╣`);
-          console.log(`║ Survive : ${bar(avgS)} ${(avgS*100).toFixed(1)}%`.padEnd(66) + '║');
-          console.log(`║ Grow    : ${bar(avgG)} ${(avgG*100).toFixed(1)}%`.padEnd(66) + '║');
-          console.log(`║ Explore : ${bar(avgE)} ${(avgE*100).toFixed(1)}%`.padEnd(66) + '║');
-          console.log(`╟──────────────────────────────────────────────────────────────────╢`);
-          console.log(`║ Avg Fitness: ${avgF.toFixed(4).padEnd(52)} ║`);
-          console.log(`╚══════════════════════════════════════════════════════════════════╝`);
-
-          // Save evolution stats to DB
-          world.persistence.saveEvolutionStats({
-              worldId: world.id,
-              generation: parseInt(gen),
-              tick: world.tickCount,
-              avgFitness: avgF,
-              weights: { survive: avgS, grow: avgG, explore: avgE },
-              populationCount: stats.count
-          }).catch(err => console.error("Failed to save evolution stats:", err));
-
-          // Auto-save experiment metadata periodically
-          if (world.tickCount % 1000 === 0) {
-              world.persistence.saveExperimentMetadata({
-                  id: `${world.id}_EXP_${new Date().toISOString().split('T')[0]}`,
-                  config: { mutationRateBase: 0.05, evolutionInterval: this.evolutionIntervalTicks },
-                  startedAt: Date.now(), // Approximate
-                  totalGenerations: parseInt(gen)
-              }).catch(err => console.error("Failed to save exp metadata:", err));
-          }
-      }
+    }
   }
 
   private evolve(world: World, agents: NodeInterface[]): void {
@@ -298,19 +298,19 @@ export class GoalGASystem {
     if (candidates.length < 2) return;
 
     candidates.sort((a, b) => b.fitness - a.fitness);
-    
+
     // Elitism: Keep top 10% unchanged
     const eliteCount = Math.max(1, Math.floor(candidates.length * 0.1));
     const elites = candidates.slice(0, eliteCount);
-    
+
     // Survivors: Top 50% can reproduce
     const survivors = candidates.slice(0, Math.ceil(candidates.length / 2));
-    
+
     // Replacees: Bottom 50% are replaced
     const replacees = candidates.slice(Math.ceil(candidates.length / 2));
 
     const prng = new PRNG(hashStringToSeed(`${world.id}:evolve:${world.tickCount}`));
-    
+
     // Hyper-Evolution: Adaptive Mutation Rate based on stagnation
     // If average fitness is low, boost mutation
     const avgFitness = candidates.reduce((sum, c) => sum + c.fitness, 0) / candidates.length;
@@ -323,7 +323,7 @@ export class GoalGASystem {
 
       const compA = (parentA.components.get('GoalGA') as GoalGAComponent).state.genome;
       const compB = (parentB.components.get('GoalGA') as GoalGAComponent).state.genome;
-      
+
       let childGenome = this.crossoverGenome(compA, compB, prng);
       childGenome = this.mutateGenome(childGenome, prng, mutationBoost);
 
@@ -338,13 +338,13 @@ export class GoalGASystem {
   }
 
   private tournamentSelect(candidates: Candidate[], prng: PRNG): Candidate {
-      const size = 3;
-      let best = candidates[prng.nextInt(candidates.length)];
-      for(let i=0; i<size-1; i++) {
-          const next = candidates[prng.nextInt(candidates.length)];
-          if (next.fitness > best.fitness) best = next;
-      }
-      return best;
+    const size = 3;
+    let best = candidates[prng.nextInt(candidates.length)];
+    for (let i = 0; i < size - 1; i++) {
+      const next = candidates[prng.nextInt(candidates.length)];
+      if (next.fitness > best.fitness) best = next;
+    }
+    return best;
   }
 
   private mutateGenome(genome: GoalGenome, prng: PRNG, boost: number = 0): GoalGenome {
@@ -354,7 +354,7 @@ export class GoalGASystem {
       const delta = (prng.nextFloat01() - 0.5) * 0.4; // Increased mutation range
       return clamp01(v + delta);
     };
-    
+
     const jitterStat = (v: number, min: number, max: number) => {
       if (prng.nextFloat01() > rate) return v;
       const delta = (prng.nextFloat01() - 0.5) * 0.2;
@@ -366,7 +366,7 @@ export class GoalGASystem {
       grow: jitter(genome.weights.grow),
       explore: jitter(genome.weights.explore)
     };
-    
+
     const s = {
       size: jitterStat(genome.stats.size, 0.1, 2.0),
       speed: jitterStat(genome.stats.speed, 0.1, 2.0),

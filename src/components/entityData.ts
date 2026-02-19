@@ -117,6 +117,7 @@ export interface CorpseData {
 export interface PlaceData {
   identity: { name: string; type: string };
   position: Position;
+  environmentRecipeId?: string;
   maze: {
     radius: number;
     activityLevel: number;

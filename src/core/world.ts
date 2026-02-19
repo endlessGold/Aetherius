@@ -1,7 +1,7 @@
 import { NodeInterface } from './interfaces.js';
 import { EventBus } from './events/eventBus.js'; // New Event System
 import { EventCategory, System } from './events/eventTypes.js';
-import { EnvironmentGrid } from './environment/environmentGrid.js';
+import { Grid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
 import { GoalGASystem } from './systems/goalGASystem.js';
 import { InteractionSystem } from './systems/interactionSystem.js';
@@ -37,7 +37,7 @@ export class World {
   private isTicking: boolean = false;
 
   // High-Resolution Simulation Components
-  environment: EnvironmentGrid;
+  environment: Grid;
   natureSystem: NatureSystem;
   goalGASystem: GoalGASystem;
   interactionSystem: InteractionSystem;
@@ -71,7 +71,7 @@ export class World {
     // Create a massive world grid (7000x7000 default)
     // 21 layers * 49M cells ≈ 1 Billion parameters
     // Chunk system handles memory efficiently
-    this.environment = new EnvironmentGrid();
+    this.environment = new Grid();
     this.natureSystem = new NatureSystem(this.environment);
     this.natureSystem.initializeWorld(this.rng);
     this.goalGASystem = new GoalGASystem();

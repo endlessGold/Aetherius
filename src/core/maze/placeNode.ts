@@ -10,6 +10,7 @@ export class PlaceComponent extends ComponentBase<PlaceData> {
         super({
             identity: initial.identity ?? { name: 'Unknown Place', type: 'Generic' },
             position: initial.position ?? { x: 0, y: 0 },
+            environmentRecipeId: initial.environmentRecipeId ?? 'forest',
             maze: initial.maze ?? {
                 radius: 5,
                 activityLevel: 50,
@@ -21,13 +22,12 @@ export class PlaceComponent extends ComponentBase<PlaceData> {
 }
 
 export class Place extends Entity implements NodeInterface {
-    constructor(id: string, name: string, x: number, y: number) {
+    constructor(id: string, name: string, x: number, y: number, environmentRecipeId?: string) {
         super(id, 'Place');
-        
-        // Add PlaceComponent
         this.addComponent(new PlaceComponent({
             identity: { name, type: 'Natural' },
             position: { x, y },
+            environmentRecipeId: environmentRecipeId ?? 'forest',
             maze: {
                 radius: 5,
                 activityLevel: 50,
