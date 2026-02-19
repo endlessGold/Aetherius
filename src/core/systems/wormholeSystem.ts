@@ -86,7 +86,7 @@ export class WormholeSystem extends BaseSystem {
 
     const candidates = from.manager.entities.filter((e: any) => {
       const behavior = e.children?.[0] as any;
-      return Boolean(behavior?.components?.goalGA);
+      return Boolean(behavior?.components?.directionGA);
     });
 
     if (candidates.length === 0) return;

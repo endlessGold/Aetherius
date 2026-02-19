@@ -120,10 +120,10 @@ async function runEcosystem() {
   const firstCorpse = corpses[0];
   const soilN = firstCorpse
     ? world.environment.get(
-        firstCorpse.children[0].components.position.x,
-        firstCorpse.children[0].components.position.y,
-        Environment.Layer.SoilNitrogen
-      )
+      firstCorpse.children[0].components.position.x,
+      firstCorpse.children[0].components.position.y,
+      Environment.Layer.SoilNitrogen
+    )
     : 0;
 
   const ok =
@@ -175,7 +175,12 @@ async function runScience() {
   const query =
     process.argv[3] ||
     '지구 온난화가 해수면 상승에 미치는 영향을 물리학, 생물학, 지질학 관점에서 설명해줘';
-  const orchestrator = new ScienceOrchestrator();
+  const orchestrator = new ScienceOrchestrator({
+    mode: 'lite',
+    enablePeerReview: false,
+    enableRebuttal: false,
+    maxAgents: 2
+  });
   const projectContext = [
     'Project: Aetherius',
     'Smoke test from tools/smoke.js science suite (no live World).'

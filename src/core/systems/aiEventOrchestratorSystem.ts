@@ -95,7 +95,7 @@ export class AIEventOrchestratorSystem extends BaseSystem {
     }).length;
     const creatures = entities.filter((e: any) => {
       const b = e?.children?.[0] as any;
-      return b?.components?.goalGA;
+      return b?.components?.directionGA;
     }).length;
 
     const maze = (this.world as any).mazeSystem?.network;

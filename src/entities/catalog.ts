@@ -137,7 +137,7 @@ function buildCatalog(manager: AssembleManager): Map<string, FactoryFn> {
                         age: {
                             age: 0
                         },
-                        goalGA: {
+                        directionGA: {
                             genome: {
                                 weights: {
                                     survive: 0.3 + rng.nextFloat01() * 0.1,

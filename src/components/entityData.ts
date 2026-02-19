@@ -1,4 +1,4 @@
-import { GoalGAState } from './goalGaComponent.js';
+import { DirectionGAState } from './directionGaComponent.js';
 
 export interface Position {
   x: number;
@@ -88,7 +88,7 @@ export interface CreatureData {
   vitality: Vitality;
   energy: Energy;
   age: Age;
-  goalGA?: GoalGAState;
+  directionGA?: DirectionGAState;
   classification?: ClassificationData;
   lifeStage?: LifeStageData;
   taxonomy?: TaxonomyData;

@@ -212,7 +212,7 @@ export class EcosystemCycleSystem {
       if (!c?.position) continue;
       if (c.classification?.subtype === 'Corpse') continue;
 
-      const isMobile = Boolean(c.goalGA) || c.classification?.subtype === 'Creature';
+      const isMobile = Boolean(c.directionGA) || c.classification?.subtype === 'Creature';
       if (!isMobile) continue;
 
       const nearest = network.getNearestNode(c.position.x, c.position.y, 12);
@@ -256,7 +256,7 @@ export class EcosystemCycleSystem {
       const d = Math.sqrt(dirX * dirX + dirY * dirY);
       if (d < 1) continue;
 
-      const speed = 0.5 + (c.goalGA?.genome?.stats?.speed || 0) * 0.05;
+      const speed = 0.5 + (c.directionGA?.genome?.stats?.speed || 0) * 0.05;
       c.position.x += (dirX / d) * speed;
       c.position.y += (dirY / d) * speed;
       c.position.x = Math.max(0, Math.min(100, c.position.x));
@@ -271,8 +271,8 @@ export class EcosystemCycleSystem {
     const moisture = world.environment.get(pos.x, pos.y, EnvironmentLayer.SoilMoisture);
     const tempStress = this.season.seasonIndex === 3 ? clamp01((10 - temp) / 10) : clamp01((temp - 38) / 8);
     const waterStress = clamp01((10 - moisture) / 10);
-    const social = components.goalGA?.genome?.stats?.sociability ?? 0.5;
-    const wander = components.goalGA?.genome?.stats?.wanderlust ?? 0.5;
+    const social = components.directionGA?.genome?.stats?.sociability ?? 0.5;
+    const wander = components.directionGA?.genome?.stats?.wanderlust ?? 0.5;
     return clamp01(0.35 * tempStress + 0.35 * waterStress + 0.15 * wander + 0.15 * (1 - social));
   }
 
@@ -485,10 +485,10 @@ export class EcosystemCycleSystem {
 
     oc.position.x = (ac.position.x + bc.position.x) / 2;
     oc.position.y = (ac.position.y + bc.position.y) / 2;
-    if (oc.goalGA?.genome?.weights && ac.goalGA?.genome?.weights && bc.goalGA?.genome?.weights) {
-      oc.goalGA.genome.weights.survive = (ac.goalGA.genome.weights.survive + bc.goalGA.genome.weights.survive) / 2;
-      oc.goalGA.genome.weights.grow = (ac.goalGA.genome.weights.grow + bc.goalGA.genome.weights.grow) / 2;
-      oc.goalGA.genome.weights.explore = (ac.goalGA.genome.weights.explore + bc.goalGA.genome.weights.explore) / 2;
+    if (oc.directionGA?.genome?.weights && ac.directionGA?.genome?.weights && bc.directionGA?.genome?.weights) {
+      oc.directionGA.genome.weights.survive = (ac.directionGA.genome.weights.survive + bc.directionGA.genome.weights.survive) / 2;
+      oc.directionGA.genome.weights.grow = (ac.directionGA.genome.weights.grow + bc.directionGA.genome.weights.grow) / 2;
+      oc.directionGA.genome.weights.explore = (ac.directionGA.genome.weights.explore + bc.directionGA.genome.weights.explore) / 2;
     }
 
     world.eventBus.publish(new Biological.HybridOffspringBorn(offspringId, a.id, b.id, world.id, 'EcosystemCycleSystem'));

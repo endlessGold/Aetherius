@@ -2,7 +2,7 @@ import { World } from '../core/world.js';
 import { AssembleManager, BehaviorNode } from './assembly.js';
 import { CreatureEntity, CreatureBehavior } from './behaviors.js';
 import { CreatureData } from '../components/entityData.js';
-import { GoalGAState, GoalGenome, GoalKind } from '../components/goalGaComponent.js';
+import { DirectionGAState, DirectionGenome, DirectionKind } from '../components/directionGaComponent.js';
 import { PRNG, hashStringToSeed } from '../ai/prng.js';
 import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
 
@@ -24,7 +24,7 @@ export class EvolutionSystem {
 
     const offspringByParent = new Map<string, OffspringAgg>();
     for (const agent of agents) {
-      const state = agent.components.goalGA;
+      const state = agent.components.directionGA;
       if (!state) continue;
       this.ensureLineage(state);
       if (state.lineage.role !== 'Offspring' || !state.lineage.parentId) continue;
@@ -35,8 +35,8 @@ export class EvolutionSystem {
     }
 
     for (const agent of agents) {
-      if (!agent.components.goalGA) continue;
-      this.stepAgent(manager, world, agent, agent.components.goalGA, offspringByParent.get(agent.id));
+      if (!agent.components.directionGA) continue;
+      this.stepAgent(manager, world, agent, agent.components.directionGA, offspringByParent.get(agent.id));
     }
 
     if (world.tickCount > 0 && world.tickCount % this.evolutionIntervalTicks === 0) {
@@ -68,7 +68,7 @@ export class EvolutionSystem {
     for (const entity of manager.entities) {
       for (const child of entity.children) {
         const comp = (child as any).components;
-        if (comp && comp.goalGA) {
+        if (comp && comp.directionGA) {
           if (!child.id) child.id = entity.id;
           agents.push(child as BehaviorNode<CreatureData>);
         }
@@ -77,7 +77,7 @@ export class EvolutionSystem {
     return agents;
   }
 
-  private spawnOffspring(manager: AssembleManager, world: World, parent: BehaviorNode<CreatureData>, state: GoalGAState): void {
+  private spawnOffspring(manager: AssembleManager, world: World, parent: BehaviorNode<CreatureData>, state: DirectionGAState): void {
     const parentId = parent.id;
     state.lineage.offspringCount++;
     const offspringId = world.nextId(`${parentId}_off_${state.lineage.offspringCount}`);
@@ -97,7 +97,7 @@ export class EvolutionSystem {
           vitality: { hp: 60 },
           energy: { energy: 40 },
           age: { age: 0 },
-          goalGA: {
+          directionGA: {
             genome: childGenome,
             purpose: { kind: 'Survive', target: 1 },
             physiology: { energy: 40, hydration: 50 },
@@ -120,7 +120,7 @@ export class EvolutionSystem {
     manager: AssembleManager,
     world: World,
     agent: BehaviorNode<CreatureData>,
-    state: GoalGAState,
+    state: DirectionGAState,
     offspringAgg?: OffspringAgg
   ): void {
     const c = agent.components;
@@ -187,7 +187,7 @@ export class EvolutionSystem {
     return { temperature, humidity, soilMoisture, light, nitrogen };
   }
 
-  private selectPurpose(genome: GoalGenome, deficits: { energy: number; hydration: number }) {
+  private selectPurpose(genome: DirectionGenome, deficits: { energy: number; hydration: number }) {
     const surviveNeed = Math.max(deficits.energy, deficits.hydration);
     const growNeed = clamp01(1 - surviveNeed) * 0.6;
     const exploreNeed = clamp01(1 - surviveNeed) * 0.4;
@@ -196,7 +196,7 @@ export class EvolutionSystem {
     const scoreGrow = genome.weights.grow * (0.2 + growNeed);
     const scoreExplore = genome.weights.explore * (0.2 + exploreNeed);
 
-    let kind: GoalKind = 'Survive';
+    let kind: DirectionKind = 'Survive';
     let target = surviveNeed;
     if (scoreGrow >= scoreSurvive && scoreGrow >= scoreExplore) {
       kind = 'Grow';
@@ -215,7 +215,7 @@ export class EvolutionSystem {
     env: { temperature: number; humidity: number; soilMoisture: number; light: number; nitrogen: number }
   ): void {
     const c = agent.components;
-    const s = c.goalGA!;
+    const s = c.directionGA!;
     if (!s.genome?.stats) return;
     const prng = new PRNG(hashStringToSeed(`${world.id}:${agent.id}:${world.tickCount}`));
 
@@ -270,7 +270,7 @@ export class EvolutionSystem {
 
   private computePurposeAchievement(
     c: CreatureData,
-    state: GoalGAState,
+    state: DirectionGAState,
     deficits: { energy: number; hydration: number }
   ): number {
     if (state.purpose.kind === 'Survive') {
@@ -285,7 +285,7 @@ export class EvolutionSystem {
     return clamp01(1 - pressure);
   }
 
-  private computeFitness(c: CreatureData, state: GoalGAState, deltaAchievement: number, offspringAvgFitness: number): number {
+  private computeFitness(c: CreatureData, state: DirectionGAState, deltaAchievement: number, offspringAvgFitness: number): number {
     const survival = 0.5 * clamp01(c.energy.energy / 100) + 0.5 * clamp01(c.vitality.hp / 100);
     const longevity = clamp01(state.metrics.ageTicks / 200);
     const novelty = deltaAchievement > 0 ? clamp01(deltaAchievement) : 0;
@@ -296,10 +296,10 @@ export class EvolutionSystem {
   private evolve(world: World, agents: BehaviorNode<CreatureData>[]): void {
     const candidates: Candidate[] = [];
     for (const node of agents) {
-      if (!node.components.goalGA) continue;
-      if (node.components.goalGA.lineage?.role === 'Offspring') continue;
+      if (!node.components.directionGA) continue;
+      if (node.components.directionGA.lineage?.role === 'Offspring') continue;
 
-      candidates.push({ node, fitness: node.components.goalGA.metrics.fitness });
+      candidates.push({ node, fitness: node.components.directionGA.metrics.fitness });
     }
     if (candidates.length < 2) return;
 
@@ -317,23 +317,23 @@ export class EvolutionSystem {
       const parentA = this.tournamentSelect(survivors, prng).node;
       const parentB = this.tournamentSelect(survivors, prng).node;
 
-      const compA = parentA.components.goalGA!.genome;
-      const compB = parentB.components.goalGA!.genome;
+      const compA = parentA.components.directionGA!.genome;
+      const compB = parentB.components.directionGA!.genome;
 
       let childGenome = this.crossoverGenome(compA, compB, prng);
       childGenome = this.mutateGenome(childGenome, prng, mutationBoost);
 
       const comp = target.node.components;
-      comp.goalGA!.genome = childGenome;
-      comp.goalGA!.metrics.fitness = 0;
-      comp.goalGA!.metrics.purposeAchievement = 0;
+      comp.directionGA!.genome = childGenome;
+      comp.directionGA!.metrics.fitness = 0;
+      comp.directionGA!.metrics.purposeAchievement = 0;
 
       comp.energy.energy = 50;
       comp.vitality.hp = 100;
     }
   }
 
-  private ensureLineage(state: GoalGAState) {
+  private ensureLineage(state: DirectionGAState) {
     if (state.lineage) return;
     state.lineage = { role: 'Progenitor', offspringCount: 0, generation: 0 };
   }
@@ -348,7 +348,7 @@ export class EvolutionSystem {
     return best;
   }
 
-  private crossoverGenome(a: GoalGenome, b: GoalGenome, prng: PRNG): GoalGenome {
+  private crossoverGenome(a: DirectionGenome, b: DirectionGenome, prng: PRNG): DirectionGenome {
     const pick = () => (prng.nextFloat01() < 0.5 ? a : b);
     const w = {
       survive: pick().weights.survive,
@@ -372,7 +372,7 @@ export class EvolutionSystem {
     };
   }
 
-  private mutateGenome(genome: GoalGenome, prng: PRNG, boost: number = 0): GoalGenome {
+  private mutateGenome(genome: DirectionGenome, prng: PRNG, boost: number = 0): DirectionGenome {
     const rate = genome.mutationRate + boost;
     const jitter = (v: number) => {
       if (prng.nextFloat01() > rate) return v;
@@ -411,7 +411,7 @@ export class EvolutionSystem {
     const stats = { survive: 0, grow: 0, explore: 0, fitness: 0, count: 0 };
 
     for (const agent of agents) {
-      const s = agent.components.goalGA!;
+      const s = agent.components.directionGA!;
       stats.survive += s.genome.weights.survive;
       stats.grow += s.genome.weights.grow;
       stats.explore += s.genome.weights.explore;

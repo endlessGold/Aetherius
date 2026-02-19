@@ -297,11 +297,11 @@ export class CommandHandler {
   private handleBless(args: string[]): CommandResult {
     const target = args[0];
     let count = 0;
-    this.getManager().entities.forEach((entity: { children?: Array<{ components?: { vitality?: { hp: number }; energy?: { energy: number }; growth?: unknown; goalGA?: unknown } }> }) => {
+    this.getManager().entities.forEach((entity: { children?: Array<{ components?: { vitality?: { hp: number }; energy?: { energy: number }; growth?: unknown; directionGA?: unknown } }> }) => {
       const behavior = entity.children?.[0];
       const c = behavior?.components;
       if (!c?.vitality) return;
-      let match = target === 'all' || (target === 'plants' && c.growth) || (target === 'creatures' && c.goalGA);
+      let match = target === 'all' || (target === 'plants' && c.growth) || (target === 'creatures' && c.directionGA);
       if (match) { c.vitality.hp = 100; if (c.energy) c.energy.energy = 100; count++; }
     });
     return { success: true, message: `DIVINE GRACE! You have healed ${count} beings. They rejoice in your name.` };
@@ -382,8 +382,8 @@ export class CommandHandler {
       const p = comp.position as { x: number; y: number };
       info += `Pos: (${p.x.toFixed(1)}, ${p.y.toFixed(1)})\n`;
     }
-    if (comp.goalGA) {
-      const ga = comp.goalGA as { purpose?: { kind: string; target: number }; metrics?: { lastAction: string }; genome?: { stats?: { size: number; speed: number; coldResist: number } } };
+    if (comp.directionGA) {
+      const ga = comp.directionGA as { purpose?: { kind: string; target: number }; metrics?: { lastAction: string }; genome?: { stats?: { size: number; speed: number; coldResist: number } } };
       info += `Purpose: ${ga.purpose?.kind} (Target: ${ga.purpose?.target?.toFixed(2) ?? '?'})\n`;
       info += `Last Action: ${ga.metrics?.lastAction ?? '?'}\n`;
       if (ga.genome?.stats) info += `Genes: Size=${ga.genome.stats.size.toFixed(2)} Speed=${ga.genome.stats.speed.toFixed(2)} ColdRes=${ga.genome.stats.coldResist.toFixed(2)}`;
@@ -516,7 +516,7 @@ export class CommandHandler {
     const entities = manager.entities ?? [];
     const places = entities.filter((e: unknown) => (e as { type?: string })?.type === 'Place').length;
     const plants = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { growth?: unknown } }> })?.children?.[0]?.components?.growth).length;
-    const creatures = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { goalGA?: unknown } }> })?.children?.[0]?.components?.goalGA).length;
+    const creatures = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { directionGA?: unknown } }> })?.children?.[0]?.components?.directionGA).length;
     let totalHp = 0, totalEnergy = 0, counted = 0;
     for (const e of entities) {
       const c = (e as { children?: Array<{ components?: { vitality?: { hp: number }; energy?: { energy: number } } }> })?.children?.[0]?.components;
@@ -669,7 +669,7 @@ Available divine actions (you may recommend these; one command per line in Recom
     const found = universeRegistry.findEntityAcrossWorlds(entityId);
     if (!found) return { success: false, message: `Entity not found: ${entityId}` };
     const c = (found.entity.children?.[0] as { components?: Record<string, unknown> })?.components;
-    const snapshot = { worldId: found.worldId, id: entityId, classification: c?.classification, lifeStage: c?.lifeStage, taxonomy: c?.taxonomy, disease: c?.disease, position: c?.position, vitality: c?.vitality, energy: c?.energy, goalGA: c?.goalGA };
+    const snapshot = { worldId: found.worldId, id: entityId, classification: c?.classification, lifeStage: c?.lifeStage, taxonomy: c?.taxonomy, disease: c?.disease, position: c?.position, vitality: c?.vitality, energy: c?.energy, directionGA: c?.directionGA };
     return { success: true, message: JSON.stringify(snapshot, null, 2) };
   }
 

@@ -2,14 +2,14 @@ import { World } from '../world.js';
 import { NodeInterface } from '../interfaces.js';
 import { Entity } from '../node.js';
 import { EnvironmentLayer } from '../environment/environmentGrid.js';
-import { GoalGAComponent, GoalKind, GoalGenome } from '../../components/goalGaComponent.js';
+import { DirectionGAComponent, DirectionKind, DirectionGenome } from '../../components/directionGaComponent.js';
 import { PRNG, hashStringToSeed } from '../../ai/prng.js';
 import { NodePool } from '../nodePool.js';
 
 type Candidate = { node: NodeInterface; fitness: number };
 type OffspringAgg = { sumFitness: number; count: number };
 
-export class GoalGASystem {
+export class DirectionSystem {
   private evolutionIntervalTicks: number;
   private maxOffspringPerProgenitor: number = 3;
   private maxOffspringTotal: number = 200;
@@ -25,7 +25,7 @@ export class GoalGASystem {
     const offspringByParent = new Map<string, OffspringAgg>();
     let totalOffspring = 0;
     for (const agent of agents) {
-      const comp = agent.components.get('GoalGA') as GoalGAComponent | undefined;
+      const comp = agent.components.get('DirectionGA') as DirectionGAComponent | undefined;
       if (!comp) continue;
       this.ensureLineage(comp);
       if (comp.state.lineage.role !== 'Offspring' || !comp.state.lineage.parentId) continue;
@@ -37,7 +37,7 @@ export class GoalGASystem {
     }
 
     for (const agent of agents) {
-      const comp = agent.components.get('GoalGA') as GoalGAComponent | undefined;
+      const comp = agent.components.get('DirectionGA') as DirectionGAComponent | undefined;
       if (!comp) continue;
 
       this.stepAgent(world, agent, comp, offspringByParent.get(agent.id), totalOffspring);
@@ -50,13 +50,13 @@ export class GoalGASystem {
   }
 
   private getAgents(world: World): NodeInterface[] {
-    return Array.from(world.nodes.values()).filter((n) => n.components.has('GoalGA'));
+    return Array.from(world.nodes.values()).filter((n) => n.components.has('DirectionGA'));
   }
 
   private stepAgent(
     world: World,
     agent: NodeInterface,
-    comp: GoalGAComponent,
+    comp: DirectionGAComponent,
     offspringAgg: OffspringAgg | undefined,
     totalOffspring: number
   ): void {
@@ -114,7 +114,7 @@ export class GoalGASystem {
     return { temperature, humidity, soilMoisture, light, nitrogen };
   }
 
-  private selectPurpose(genome: GoalGenome, deficits: { energy: number; hydration: number }) {
+  private selectPurpose(genome: DirectionGenome, deficits: { energy: number; hydration: number }) {
     const surviveNeed = Math.max(deficits.energy, deficits.hydration);
     const growNeed = clamp01(1 - surviveNeed) * 0.6;
     const exploreNeed = clamp01(1 - surviveNeed) * 0.4;
@@ -123,7 +123,7 @@ export class GoalGASystem {
     const scoreGrow = genome.weights.grow * (0.2 + growNeed);
     const scoreExplore = genome.weights.explore * (0.2 + exploreNeed);
 
-    let kind: GoalKind = 'Survive';
+    let kind: DirectionKind = 'Survive';
     let target = surviveNeed;
     if (scoreGrow >= scoreSurvive && scoreGrow >= scoreExplore) {
       kind = 'Grow';
@@ -139,7 +139,7 @@ export class GoalGASystem {
   private performAction(
     world: World,
     agentId: string,
-    comp: GoalGAComponent,
+    comp: DirectionGAComponent,
     env: { temperature: number; humidity: number; soilMoisture: number; light: number; nitrogen: number }
   ): void {
     const s = comp.state;
@@ -179,7 +179,7 @@ export class GoalGASystem {
   }
 
   private computePurposeAchievement(
-    state: GoalGAComponent['state'],
+    state: DirectionGAComponent['state'],
     deficits: { energy: number; hydration: number }
   ): number {
     if (state.purpose.kind === 'Survive') {
@@ -194,7 +194,7 @@ export class GoalGASystem {
     return clamp01(1 - pressure);
   }
 
-  private computeFitness(state: GoalGAComponent['state'], deltaAchievement: number, offspringAvgFitness: number): number {
+  private computeFitness(state: DirectionGAComponent['state'], deltaAchievement: number, offspringAvgFitness: number): number {
     const survival = 0.5 * clamp01(state.physiology.energy / 100) + 0.5 * clamp01(state.physiology.hydration / 100);
     const growth = clamp01(state.growth.biomass / 100);
     const longevity = clamp01(state.metrics.ageTicks / 200);
@@ -205,7 +205,7 @@ export class GoalGASystem {
     return clamp01(base + hiveBonus);
   }
 
-  private crossoverGenome(a: GoalGenome, b: GoalGenome, prng: PRNG): GoalGenome {
+  private crossoverGenome(a: DirectionGenome, b: DirectionGenome, prng: PRNG): DirectionGenome {
     const pick = () => (prng.nextFloat01() < 0.5 ? a : b);
     const w = {
       survive: pick().weights.survive,
@@ -233,7 +233,7 @@ export class GoalGASystem {
     const stats = { survive: 0, grow: 0, explore: 0, fitness: 0, count: 0 };
 
     for (const agent of agents) {
-      const comp = agent.components.get('GoalGA') as GoalGAComponent;
+      const comp = agent.components.get('DirectionGA') as DirectionGAComponent;
       this.ensureLineage(comp);
       if (comp.state.lineage.role === 'Offspring') continue;
       stats.survive += comp.state.genome.weights.survive;
@@ -289,7 +289,7 @@ export class GoalGASystem {
   private evolve(world: World, agents: NodeInterface[]): void {
     const candidates: Candidate[] = [];
     for (const node of agents) {
-      const comp = node.components.get('GoalGA') as GoalGAComponent | undefined;
+      const comp = node.components.get('DirectionGA') as DirectionGAComponent | undefined;
       if (!comp) continue;
       this.ensureLineage(comp);
       if (comp.state.lineage.role === 'Offspring') continue;
@@ -321,13 +321,13 @@ export class GoalGASystem {
       const parentA = this.tournamentSelect(survivors, prng).node;
       const parentB = this.tournamentSelect(survivors, prng).node;
 
-      const compA = (parentA.components.get('GoalGA') as GoalGAComponent).state.genome;
-      const compB = (parentB.components.get('GoalGA') as GoalGAComponent).state.genome;
+      const compA = (parentA.components.get('DirectionGA') as DirectionGAComponent).state.genome;
+      const compB = (parentB.components.get('DirectionGA') as DirectionGAComponent).state.genome;
 
       let childGenome = this.crossoverGenome(compA, compB, prng);
       childGenome = this.mutateGenome(childGenome, prng, mutationBoost);
 
-      const comp = target.node.components.get('GoalGA') as GoalGAComponent;
+      const comp = target.node.components.get('DirectionGA') as DirectionGAComponent;
       comp.state.genome = childGenome;
       // Reset state for new generation
       comp.state.metrics.fitness = 0;
@@ -347,7 +347,7 @@ export class GoalGASystem {
     return best;
   }
 
-  private mutateGenome(genome: GoalGenome, prng: PRNG, boost: number = 0): GoalGenome {
+  private mutateGenome(genome: DirectionGenome, prng: PRNG, boost: number = 0): DirectionGenome {
     const rate = genome.mutationRate + boost;
     const jitter = (v: number) => {
       if (prng.nextFloat01() > rate) return v;
@@ -383,13 +383,13 @@ export class GoalGASystem {
     };
   }
 
-  private ensureLineage(comp: GoalGAComponent) {
+  private ensureLineage(comp: DirectionGAComponent) {
     const s = comp.state as any;
     if (s.lineage) return;
     s.lineage = { role: 'Progenitor', offspringCount: 0, generation: 0 };
   }
 
-  private cloneGenome(genome: GoalGenome): GoalGenome {
+  private cloneGenome(genome: DirectionGenome): DirectionGenome {
     return {
       weights: { survive: genome.weights.survive, grow: genome.weights.grow, explore: genome.weights.explore },
       stats: { size: genome.stats.size, speed: genome.stats.speed, coldResist: genome.stats.coldResist },
@@ -397,7 +397,7 @@ export class GoalGASystem {
     };
   }
 
-  private spawnOffspring(world: World, parent: NodeInterface, parentComp: GoalGAComponent): void {
+  private spawnOffspring(world: World, parent: NodeInterface, parentComp: DirectionGAComponent): void {
     const s = parentComp.state;
     s.lineage.offspringCount += 1;
     const prng = new PRNG(hashStringToSeed(`${world.id}:${parent.id}:spawn:${world.tickCount}:${s.lineage.offspringCount}`));
@@ -405,7 +405,7 @@ export class GoalGASystem {
     const offspringId = `${parent.id}_off_${s.lineage.offspringCount}_${suffix}`;
 
     const childGenome = this.cloneGenome(s.genome);
-    const childComp = new GoalGAComponent({
+    const childComp = new DirectionGAComponent({
       genome: childGenome,
       lineage: {
         role: 'Offspring',

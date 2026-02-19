@@ -79,7 +79,7 @@ export class AutoSystem {
     manager.entities.forEach(e => {
       const c = (e.children[0] as any).components;
       if (c.growth) plants++;
-      if (c.goalGA) creatures++;
+      if (c.directionGA) creatures++;
       if (c.vitality) totalHp += c.vitality.hp;
       if (c.energy) totalEnergy += c.energy.energy;
     });

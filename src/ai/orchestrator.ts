@@ -21,18 +21,22 @@ export type ExperimentEventPayload =
     | { kind: 'science_synthesis'; query: string; synthesis: string; recommendedActions?: string[] };
 
 export interface ScienceOrchestratorOptions {
-    /** 각 에이전트 활동(가설/동료검토/합성) 시 호출. 미지정 시 persistence + getWorldContext로 자동 저장 */
     recordExperimentEvent?: (payload: ExperimentEventPayload) => Promise<void>;
-    /** persistence가 있으면 recordExperimentEvent 미지정 시 가설/검토/반론/합성을 DB에 자동 저장 */
     persistence?: Persistence;
-    /** DB 저장 시 worldId·tick 부여용. persistence와 함께 지정 */
     getWorldContext?: () => { worldId: string; tick: number };
+    mode?: 'full' | 'lite';
+    maxAgents?: number;
+    enablePeerReview?: boolean;
+    enableRebuttal?: boolean;
 }
 
 export class ScienceOrchestrator {
     private agents: ScientistAgent[];
     private llm: LLMService;
     private recordExperimentEvent?: (payload: ExperimentEventPayload) => Promise<void>;
+    private mode: 'full' | 'lite';
+    private enablePeerReview: boolean;
+    private enableRebuttal: boolean;
 
     constructor(options?: ScienceOrchestratorOptions) {
         this.llm = createDefaultLLMService();
@@ -51,7 +55,12 @@ export class ScienceOrchestrator {
                 });
             };
         }
-        this.agents = [
+        const envMode = (process.env.AETHERIUS_SCIENCE_MODE || '').toLowerCase();
+        const mode = options?.mode ?? (envMode === 'lite' ? 'lite' : 'full');
+        this.mode = mode;
+        this.enablePeerReview = options?.enablePeerReview ?? (mode === 'full');
+        this.enableRebuttal = options?.enableRebuttal ?? (mode === 'full');
+        const baseAgents: ScientistAgent[] = [
             new NetworkScienceAgent(this.llm),
             new EcologyAgent(this.llm),
             new EvolutionAgent(this.llm),
@@ -59,12 +68,13 @@ export class ScienceOrchestrator {
             new LifeScienceAgent(this.llm),
             new GeologistAgent(this.llm)
         ];
+        const maxAgents = options?.maxAgents && options.maxAgents > 0 ? options.maxAgents : baseAgents.length;
+        this.agents = baseAgents.slice(0, maxAgents);
     }
 
     async processQuery(query: string, projectContext: string): Promise<ScienceReport> {
         console.log(`\n🧪 [Science] Orchestrating query: "${query}"`);
 
-        // Phase 1: Individual Analysis — 2명씩 배치로 동시 호출 제한 (429 완화)
         const hypotheses: AgentResponse[] = [];
         console.log(`\n--- Phase 1: Individual Analysis ---`);
         const phase1Concurrency = 2;
@@ -85,46 +95,46 @@ export class ScienceOrchestrator {
             }));
         }
 
-        // Phase 2: Peer Review — 동료검토마다 이벤트 기록
         console.log(`\n--- Phase 2: Peer Review ---`);
         const reviews: { reviewer: string; target: string; critique: string }[] = [];
+        if (this.enablePeerReview) {
+            for (const agent of this.agents) {
+                const others = hypotheses.filter(h => h.agent !== agent.domain);
+                for (const peerHypothesis of others) {
+                    console.log(`... ${agent.name} is reviewing ${peerHypothesis.agent}'s hypothesis...`);
+                    const critique = await agent.review(peerHypothesis, query, projectContext);
+                    reviews.push({ reviewer: agent.domain, target: peerHypothesis.agent, critique });
+                    await this.recordExperimentEvent?.({
+                        kind: 'science_review',
+                        reviewer: agent.domain,
+                        target: peerHypothesis.agent,
+                        query,
+                        critique
+                    });
+                }
+            }
+        }
 
-        for (const agent of this.agents) {
-            const others = hypotheses.filter(h => h.agent !== agent.domain);
-            for (const peerHypothesis of others) {
-                console.log(`... ${agent.name} is reviewing ${peerHypothesis.agent}'s hypothesis...`);
-                const critique = await agent.review(peerHypothesis, query, projectContext);
-                reviews.push({ reviewer: agent.domain, target: peerHypothesis.agent, critique });
+        console.log(`\n--- Phase 2.5: Rebuttal ---`);
+        const rebuttals: { agent: string; content: string }[] = [];
+        if (this.enableRebuttal && reviews.length > 0) {
+            for (const agent of this.agents) {
+                const myHypothesis = hypotheses.find(h => h.agent === agent.domain);
+                if (!myHypothesis) continue;
+                const reviewsOnMe = reviews.filter(r => r.target === agent.domain);
+                if (reviewsOnMe.length === 0) continue;
+                console.log(`... ${agent.name} responding to reviewers...`);
+                const content = await agent.rebut(myHypothesis, reviewsOnMe, query, projectContext);
+                rebuttals.push({ agent: agent.domain, content });
                 await this.recordExperimentEvent?.({
-                    kind: 'science_review',
-                    reviewer: agent.domain,
-                    target: peerHypothesis.agent,
+                    kind: 'science_rebuttal',
+                    agent: agent.domain,
                     query,
-                    critique
+                    content
                 });
             }
         }
 
-        // Phase 2.5: Rebuttal — 각 에이전트가 자신에 대한 검토에 반론/수정
-        console.log(`\n--- Phase 2.5: Rebuttal ---`);
-        const rebuttals: { agent: string; content: string }[] = [];
-        for (const agent of this.agents) {
-            const myHypothesis = hypotheses.find(h => h.agent === agent.domain);
-            if (!myHypothesis) continue;
-            const reviewsOnMe = reviews.filter(r => r.target === agent.domain);
-            if (reviewsOnMe.length === 0) continue;
-            console.log(`... ${agent.name} responding to reviewers...`);
-            const content = await agent.rebut(myHypothesis, reviewsOnMe, query, projectContext);
-            rebuttals.push({ agent: agent.domain, content });
-            await this.recordExperimentEvent?.({
-                kind: 'science_rebuttal',
-                agent: agent.domain,
-                query,
-                content
-            });
-        }
-
-        // Phase 3: Synthesis — 합성 결과 이벤트 기록 (가설·검토·반론 반영)
         console.log(`\n--- Phase 3: Final Synthesis ---`);
         const synthesis = await this.synthesize(query, projectContext, hypotheses, reviews, rebuttals);
         const recommendedActions = parseRecommendedActions(synthesis);

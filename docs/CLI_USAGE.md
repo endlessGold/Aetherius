@@ -110,7 +110,7 @@ node dist/main.js --mode=cli --worlds=Alpha,Beta
   - `id` 있음: 해당 엔티티 컴포넌트 상태.
 
 - **`watch <id>`**
-  - 엔티티 ID의 HP, 에너지, 위치, 목적(goalGA), 유전자 등 상세 출력.
+-  - 엔티티 ID의 HP, 에너지, 위치, 방향(goalGA), 유전자 등 상세 출력.
 
 ### 환경
 
@@ -193,7 +193,7 @@ node dist/main.js --mode=cli --worlds=Alpha,Beta
 ### 생태·분류·통계
 
 - **`taxonomy <entityId>`**
-  - 엔티티의 classification, lifeStage, taxonomy, disease, position, vitality, energy, goalGA 등 JSON 출력.
+-  - 엔티티의 classification, lifeStage, taxonomy, disease, position, vitality, energy, goalGA 등 JSON 출력.
 
 - **`disease_stats [worldId]`**
   - 해당 월드 질병 통계(에코시스템 시스템 필요).

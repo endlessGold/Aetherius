@@ -3,7 +3,7 @@ import { EventBus } from './events/eventBus.js'; // New Event System
 import { EventCategory, System } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
 import { NatureSystem } from './environment/natureSystem.js';
-import { GoalGASystem } from './systems/goalGASystem.js';
+import { DirectionSystem } from './systems/goalGASystem.js';
 import { InteractionSystem } from './systems/interactionSystem.js';
 import { SensorSystem } from './systems/sensorSystem.js';
 import { ActuatorSystem } from './systems/actuatorSystem.js';
@@ -13,7 +13,7 @@ import { EventNodeSystem } from './systems/eventNodeSystem.js';
 import { createPersistenceFromEnv, Persistence } from '../data/persistence.js';
 import { NodeSnapshot, TickSnapshot } from '../data/noSqlAdapter.js';
 import { TensorFlowModel } from '../ai/tensorFlowModel.js';
-import { AutoGodSystem } from './systems/autoGodSystem.js';
+import { AutoSystem } from './systems/autoSystem.js';
 import { MazeSystem } from './maze/mazeNetwork.js';
 import { AIEventOrchestratorSystem } from './systems/aiEventOrchestratorSystem.js';
 import { WormholeSystem } from './systems/wormholeSystem.js';
@@ -39,17 +39,17 @@ export class World {
   // High-Resolution Simulation Components
   environment: EnvironmentGrid;
   natureSystem: NatureSystem;
-  goalGASystem: GoalGASystem;
+  directionSystem: DirectionSystem;
   interactionSystem: InteractionSystem;
   sensorSystem: SensorSystem;
   actuatorSystem: ActuatorSystem;
   divineSystem: DivineSystem;
   registrarSystem: EntityRegistrarSystem;
   eventNodeSystem: EventNodeSystem;
-  autoGodSystem: AutoGodSystem;
+  autoSystem: AutoSystem;
   mazeSystem: MazeSystem;
   aiEventOrchestratorSystem: AIEventOrchestratorSystem;
-  wormholeSystem: WormholeSystem;
+  wormHoleSystem: WormholeSystem;
 
   constructor(
     id: string,
@@ -74,17 +74,17 @@ export class World {
     this.environment = new EnvironmentGrid();
     this.natureSystem = new NatureSystem(this.environment);
     this.natureSystem.initializeWorld(this.rng);
-    this.goalGASystem = new GoalGASystem();
+    this.directionSystem = new DirectionSystem();
     this.interactionSystem = new InteractionSystem(this);
     this.sensorSystem = new SensorSystem(this);
     this.actuatorSystem = new ActuatorSystem(this);
     this.divineSystem = new DivineSystem(this);
     this.registrarSystem = new EntityRegistrarSystem(this);
     this.eventNodeSystem = new EventNodeSystem(this);
-    this.autoGodSystem = new AutoGodSystem(this);
+    this.autoSystem = new AutoSystem(this);
     this.mazeSystem = new MazeSystem(this);
     this.aiEventOrchestratorSystem = new AIEventOrchestratorSystem(this);
-    this.wormholeSystem = new WormholeSystem(this);
+    this.wormHoleSystem = new WormholeSystem(this);
 
     // Register Systems to EventBus
     this.setupEventHandlers();
@@ -144,11 +144,11 @@ export class World {
       // 3. Simulate High-Res Physics
       this.natureSystem.simulate(this.tickCount);
 
-      // 4. Goal-generating GA tick
-      this.goalGASystem.tick(this);
+      // 4. Direction-generating GA tick
+      this.directionSystem.tick(this);
 
       // 5. AI God tick
-      await this.autoGodSystem.tick();
+      await this.autoSystem.tick();
 
       // 6. Maze Evolution
       this.mazeSystem.tick();

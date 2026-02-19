@@ -12,7 +12,7 @@ export interface LinearModelJson {
 }
 
 export interface PredictionResult {
-  kind: 'GoalGA.GrowthDelta';
+  kind: 'DirectionGA.GrowthDelta';
   value: number;
 }
 
@@ -58,7 +58,7 @@ export class TensorFlowModel {
 
     const value = this.predictFromFeatures(features);
 
-    return { kind: 'GoalGA.GrowthDelta', value };
+    return { kind: 'DirectionGA.GrowthDelta', value };
   }
 
   private predictFromFeatures(features: number[]): number {
@@ -73,7 +73,7 @@ export class TensorFlowModel {
   }
 
   private extractFeatures(node: NodeInterface): number[] | null {
-    const ga = node.components.get('GoalGA') as any;
+    const ga = node.components.get('DirectionGA') as any;
     if (!ga?.state) return null;
 
     const s = ga.state as {

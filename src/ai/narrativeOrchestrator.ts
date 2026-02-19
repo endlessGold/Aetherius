@@ -22,7 +22,7 @@ function buildCurrentSummary(world: World): string {
   const entities = manager.entities ?? [];
   const places = entities.filter((e: unknown) => (e as { type?: string })?.type === 'Place').length;
   const plants = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { growth?: unknown } }> })?.children?.[0]?.components?.growth).length;
-  const creatures = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { goalGA?: unknown } }> })?.children?.[0]?.components?.goalGA).length;
+  const creatures = entities.filter((e: unknown) => (e as { children?: Array<{ components?: { directionGA?: unknown } }> })?.children?.[0]?.components?.directionGA).length;
   let totalHp = 0, totalEnergy = 0, counted = 0;
   for (const e of entities) {
     const c = (e as { children?: Array<{ components?: { vitality?: { hp: number }; energy?: { energy: number } } }> })?.children?.[0]?.components;

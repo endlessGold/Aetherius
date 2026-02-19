@@ -3,7 +3,7 @@ import { World } from '../world.js';
 import { System } from '../events/eventTypes.js';
 import { BioStateComponent } from '../../components/bioStateComponent.js';
 import { ActionParamsComponent } from '../../components/actionParamsComponent.js';
-import { GoalGAComponent } from '../../components/goalGaComponent.js';
+import { DirectionGAComponent } from '../../components/directionGaComponent.js';
 import { EnvironmentLayer } from '../environment/environmentGrid.js';
 
 export class SensorSystem extends BaseSystem {
@@ -24,7 +24,7 @@ export class SensorSystem extends BaseSystem {
       const params = node.components.get('ActionParams') as ActionParamsComponent | undefined;
       if (!bio || !params) continue;
 
-      const ga = node.components.get('GoalGA') as GoalGAComponent | undefined;
+      const ga = node.components.get('DirectionGA') as DirectionGAComponent | undefined;
       const env = ga
         ? {
           temperature: this.world.environment.get(ga.state.position.x, ga.state.position.y, EnvironmentLayer.Temperature),

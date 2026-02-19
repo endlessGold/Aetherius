@@ -23,4 +23,3 @@ export type WeatherControllerOptions = {
   sunlightIntensity?: number;
   precipitation?: number;
 };
-

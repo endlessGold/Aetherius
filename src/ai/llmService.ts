@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export interface LLMService {
   generateResponse(prompt: string, context?: string): Promise<string>;
@@ -45,26 +45,26 @@ function safeJsonParse(text: string): unknown {
  * .env의 GEMINI_API_KEY를 사용한다. 없으면 AI 기능은 무음 처리(빈 응답/ null 반환).
  */
 export class GeminiLLMService implements LLMService {
-  private model: GenerativeModel | null = null;
+  private client: GoogleGenAI | null = null;
   private modelName: string;
 
   constructor(modelName?: string) {
-    this.modelName = modelName || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const envModel = process.env.GEMINI_MODEL?.trim();
+    this.modelName = modelName || envModel || 'gemini-3-pro-preview';
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (apiKey) {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 8192,
-        },
-      });
+      try {
+        this.client = new GoogleGenAI({ apiKey });
+      } catch {
+        this.client = null;
+      }
+    } else {
+      this.client = null;
     }
   }
 
   private async generate(prompt: string, systemInstruction?: string, temperature = 0.6): Promise<string> {
-    if (!this.model) return 'The spirits are silent...';
+    if (!this.client) return 'The spirits are silent...';
 
     const fullPrompt = systemInstruction
       ? `${systemInstruction}\n\n---\n\n${prompt}`
@@ -74,8 +74,15 @@ export class GeminiLLMService implements LLMService {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const result = await this.model.generateContent(fullPrompt);
-        return (result.response as { text(): string }).text().trim();
+        const result = await this.client.models.generateContent({
+          model: this.modelName,
+          contents: fullPrompt,
+          config: {
+            temperature,
+            maxOutputTokens: 8192,
+          },
+        });
+        return result.text?.trim() ?? '';
       } catch (error) {
         lastError = error;
         if (attempt < MAX_RETRIES && isRetryableError(error)) {
@@ -96,7 +103,7 @@ export class GeminiLLMService implements LLMService {
   }
 
   async generateDecision(prompt: string, _schema: unknown): Promise<unknown> {
-    if (!this.model) return null;
+    if (!this.client) return null;
 
     const system = 'You are an AI controller for a simulation. Output ONLY valid JSON (no markdown, no code block).';
     try {

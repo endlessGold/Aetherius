@@ -118,7 +118,7 @@ export class DroneBehavior extends BehaviorNode<DroneData> {
             });
 
         const plants = near.filter((comp: any) => Boolean(comp.growth)).length;
-        const creatures = near.filter((comp: any) => Boolean(comp.goalGA)).length;
+        const creatures = near.filter((comp: any) => Boolean(comp.directionGA)).length;
 
         const clip = {
             kind: 'documentary_clip',
