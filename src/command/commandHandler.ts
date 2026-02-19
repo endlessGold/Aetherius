@@ -257,12 +257,14 @@ export class CommandHandler {
     const driver = this.world.persistence.driver;
     const worldId = this.world.id;
     const snap = await this.world.persistence.getLatestSnapshot(worldId);
+    const eventCount = await this.world.persistence.getWorldEventCount(worldId);
     const envSource = process.env.AETHERIUS_NOSQL_DRIVER != null
       ? `env (AETHERIUS_NOSQL_DRIVER=${process.env.AETHERIUS_NOSQL_DRIVER})` : 'default (inmemory)';
     const summary: Record<string, unknown> = {
       driver,
       configSource: envSource,
       currentWorldId: worldId,
+      eventCount,
       latestSnapshot: snap ? {
         tick: snap.tick,
         timestamp: snap.timestamp,
@@ -270,9 +272,25 @@ export class CommandHandler {
         entitiesCount: Array.isArray(snap.entities) ? snap.entities.length : 0
       } : null
     };
-    const msg = snap
-      ? `DB: ${driver} | world=${worldId} | latest tick=${snap.tick} | nodes=${snap.nodes?.length ?? 0} entities=${Array.isArray(snap.entities) ? snap.entities.length : 0}`
-      : `DB: ${driver} | world=${worldId} | no snapshot yet`;
+    let mood: string;
+    if (!snap && eventCount === 0) {
+      mood = 'DB는 아직 깨끗한 새 캔버스입니다. 첫 관측이 기록되기를 기다리고 있습니다.';
+    } else if (snap && eventCount === 0) {
+      mood = `한 번의 스냅샷만 고요하게 떠 있습니다. 세계의 첫 숨결이 조용히 보존된 상태입니다.`;
+    } else if (eventCount > 0 && eventCount < 100) {
+      mood = `몇 장의 관측 일지가 쌓여 있습니다. 작은 생태계의 일기장이 열리기 시작했습니다.`;
+    } else if (eventCount >= 100 && eventCount < 1000) {
+      mood = `꽤 두꺼운 연대기가 만들어졌습니다. 생명과 사건들이 촘촘히 기록된 작은 도서관입니다.`;
+    } else {
+      mood = `DB는 빽빽한 연대기로 가득합니다. 이 세계의 역사를 연구할 준비가 되어 있습니다.`;
+    }
+    const driverLabel =
+      driver === 'mongodb'
+        ? 'MongoDB 성역'
+        : driver === 'redis'
+          ? 'Redis 두뇌'
+          : 'In-Memory 기록소';
+    const msg = `📚 ${driverLabel} @ world=${worldId}\n- 스냅샷: ${snap ? `tick ${snap.tick}` : '없음'}\n- 이벤트: ${eventCount}개\n→ ${mood}`;
     return { success: true, message: msg, data: summary };
   }
 
