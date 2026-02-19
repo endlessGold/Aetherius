@@ -61,12 +61,17 @@ async function cleanupRuntimeArtifacts() {
 - `data/reports/*.jsonl`:
   - 동일 이벤트를 파일로 복제한 **보조 텔레메트리**.
   - 세션 단위의 디버깅/분석용이며, 자동 정리 대상이다.
+- `data/persistence/*.jsonl`:
+  - 인메모리 드라이버 사용 시(`AETHERIUS_NOSQL_DRIVER=inmemory` 또는 미설정) `AETHERIUS_INMEMORY_PERSIST=1`(기본값)이면 TickSnapshot·WorldEvent·EvolutionStats·ExperimentMetadata를 JSONL로 영구 저장한다.
+  - 엔진 시작 시 해당 파일을 다시 읽어 인메모리 맵을 복원하므로, 외부 DB 없이도 로컬 파일 기반 영구 저장소처럼 동작한다.
 
 ## 5. 운영 가이드
 
-- 디스크를 최소화하고 싶을 때:
+-- 디스크를 최소화하고 싶을 때:
   - `.env`에 `AETHERIUS_TELEMETRY_JSONL=0` 설정 → JSONL 자체를 쓰지 않음.
   - 또는 기본값 그대로 두고, `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START=1`로 세션별 로그만 유지.
+  - 인메모리에서도 완전 휘발성으로 쓰고 싶다면 `AETHERIUS_INMEMORY_PERSIST=0`으로 설정해 `data/persistence/*.jsonl` 기록을 끈다.
 - 장기 파일 로그가 필요할 때:
   - `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START=0`로 설정하여 재시작 시 삭제되지 않게 한다.
+  - 외부 DB 없이 로컬에서만 운영할 경우, `AETHERIUS_INMEMORY_PERSIST=1`을 유지해 인메모리 드라이버를 “로컬 파일 기반 DB”처럼 활용한다.
 

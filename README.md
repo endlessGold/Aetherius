@@ -284,6 +284,7 @@ npm start -- --mode server
   - `AETHERIUS_AUTH_SECRET` (긴 랜덤 문자열, JWT 서명 키)
   - DB 연동 시 추가: `AETHERIUS_NOSQL_DRIVER=mongodb`, `AETHERIUS_MONGODB_URI`(Atlas 연결 문자열), `AETHERIUS_MONGODB_DB`(예: `aetherius`)
   - 텔레메트리 JSONL 관리: `AETHERIUS_TELEMETRY_JSONL=1`이면 `data/reports/*.jsonl`에 텔레메트리를 기록하고, `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START`(기본 `1`)가 `1`일 때 엔진 시작 시 기존 JSONL을 자동 삭제한다.
+  - 인메모리 영구 저장: `AETHERIUS_NOSQL_DRIVER=inmemory`(또는 미설정) + `AETHERIUS_INMEMORY_PERSIST=1`(기본값)일 때 `data/persistence/*.jsonl`에 TickSnapshot·WorldEvent·EvolutionStats·ExperimentMetadata를 JSONL로 저장하고, 재시작 시 해당 파일을 읽어 인메모리 상태를 복원한다.
 - 엔드포인트
   - `POST /api/login` `{ "username": "...", "password": "..." }`
   - `POST /api/tick` `{ "count": 1 }`

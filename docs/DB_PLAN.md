@@ -63,13 +63,18 @@
   - **전염병·사망·분해·계절·이동·하이브리드·다큐멘터리·과학자·AI·웜홀 등 “이벤트”** → 모두 `WorldEventPayload`로 DB에 저장.
   - 로컬 JSONL(`ecosystem.jsonl`, `documentary.jsonl`, `ai_event_decisions.jsonl`, `science_reports.jsonl`, `wormholes.jsonl` 등)은 **동일 데이터를 파일로 복제하는 보조 텔레메트리**이며, DB 저장 경로를 대체하지 않는다.
   - `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START=1`(기본값)이면 엔진 시작 시 `data/reports/*.jsonl`은 자동 삭제되고, 새 세션 텔레메트리만 다시 기록된다.
+  - 인메모리 드라이버(`AETHERIUS_NOSQL_DRIVER=inmemory` 또는 미설정)에서도 `AETHERIUS_INMEMORY_PERSIST=1`(기본값)일 때 `data/persistence/*.jsonl`에 TickSnapshot·WorldEvent·EvolutionStats·ExperimentMetadata를 JSONL로 기록하고, 프로세스 시작 시 해당 파일을 다시 로드해 로컬 파일 기반 영구 저장소처럼 동작한다.
 
 ## 3. 드라이버별 구조
 
 ### 3.1 inmemory (기본)
 
 - 설정: `AETHERIUS_NOSQL_DRIVER` 미설정 또는 `inmemory`.
-- 저장: 프로세스 메모리. 재시작 시 소실. 개발·스모크용.
+- 기본 저장: 프로세스 메모리. 개발·스모크용.
+- 추가 옵션:
+  - `AETHERIUS_INMEMORY_PERSIST=1`(기본값)일 때:
+    - 시작 시 `data/persistence/snapshots.jsonl`, `events.jsonl`, `evolution.jsonl`, `experiments.jsonl`을 읽어 인메모리 맵을 복원한다.
+    - 런타임 중 TickSnapshot·WorldEvent·EvolutionStats·ExperimentMetadata를 각각 해당 파일에 JSONL로 append해, 인메모리 드라이버만으로도 로컬 파일 기반 영구 저장이 가능하다.
 
 ### 3.2 mongodb (Atlas 등)
 

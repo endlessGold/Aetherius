@@ -1,10 +1,12 @@
 /**
  * Persistence 레이어: env 기반 드라이버 선택.
- * - inmemory: 프로세스 메모리 (기본값, DB 없음)
+ * - inmemory: 프로세스 메모리 (기본값, DB 없음, 선택적으로 로컬 파일에 영구 저장)
  * - mongodb: AETHERIUS_MONGODB_URI 설정 시 MongoDB Atlas 연동
  * - redis: AETHERIUS_REDIS_URL 설정 시 Redis 연동
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import type {
   TickSnapshot,
   WorldEventPayload,
@@ -31,7 +33,12 @@ export interface Persistence {
   saveExperimentMetadata(payload: ExperimentMetadataPayload): Promise<void>;
 }
 
-/** 인메모리 드라이버: 프로세스 종료 시 데이터 소실 (개발·테스트용) */
+type InMemoryPersistenceOptions = {
+  persistToDisk?: boolean;
+  dir?: string;
+};
+
+/** 인메모리 드라이버: 기본은 프로세스 메모리, 옵션에 따라 로컬 파일에 영구 저장 */
 class InMemoryPersistence implements Persistence {
   readonly driver = 'inmemory';
   private latestByWorld = new Map<string, TickSnapshot>();
@@ -39,8 +46,110 @@ class InMemoryPersistence implements Persistence {
   private evolutionStats: EvolutionStatsPayload[] = [];
   private experimentMetadata: ExperimentMetadataPayload[] = [];
 
+  private readonly persistToDisk: boolean;
+  private readonly dir: string;
+  private readonly files: {
+    snapshots: string;
+    events: string;
+    evolution: string;
+    experiments: string;
+  };
+
+  constructor(options?: InMemoryPersistenceOptions) {
+    this.persistToDisk = options?.persistToDisk === true;
+    this.dir = options?.dir || path.join(process.cwd(), 'data', 'persistence');
+    this.files = {
+      snapshots: path.join(this.dir, 'snapshots.jsonl'),
+      events: path.join(this.dir, 'events.jsonl'),
+      evolution: path.join(this.dir, 'evolution.jsonl'),
+      experiments: path.join(this.dir, 'experiments.jsonl')
+    };
+
+    if (this.persistToDisk) {
+      this.loadFromDisk();
+    }
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.files.snapshots)) {
+        const raw = fs.readFileSync(this.files.snapshots, 'utf8');
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const snap = JSON.parse(trimmed) as TickSnapshot;
+            this.latestByWorld.set(snap.worldId, snap);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+
+    try {
+      if (fs.existsSync(this.files.events)) {
+        const raw = fs.readFileSync(this.files.events, 'utf8');
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const ev = JSON.parse(trimmed) as WorldEventPayload;
+            const list = this.worldEvents.get(ev.worldId) ?? [];
+            list.push(ev);
+            this.worldEvents.set(ev.worldId, list);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+
+    try {
+      if (fs.existsSync(this.files.evolution)) {
+        const raw = fs.readFileSync(this.files.evolution, 'utf8');
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const e = JSON.parse(trimmed) as EvolutionStatsPayload;
+            this.evolutionStats.push(e);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+
+    try {
+      if (fs.existsSync(this.files.experiments)) {
+        const raw = fs.readFileSync(this.files.experiments, 'utf8');
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const e = JSON.parse(trimmed) as ExperimentMetadataPayload;
+            this.experimentMetadata.push(e);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+  }
+
+  private async appendJsonl(kind: keyof InMemoryPersistence['files'], payload: unknown): Promise<void> {
+    if (!this.persistToDisk) return;
+    try {
+      await fs.promises.mkdir(this.dir, { recursive: true });
+      await fs.promises.appendFile(this.files[kind], `${JSON.stringify(payload)}\n`, 'utf8');
+    } catch {
+    }
+  }
+
   async saveTickSnapshot(snapshot: TickSnapshot): Promise<void> {
     this.latestByWorld.set(snapshot.worldId, snapshot);
+    await this.appendJsonl('snapshots', snapshot);
   }
 
   async getLatestSnapshot(worldId: string): Promise<TickSnapshot | null> {
@@ -51,6 +160,7 @@ class InMemoryPersistence implements Persistence {
     const list = this.worldEvents.get(payload.worldId) ?? [];
     list.push(payload);
     this.worldEvents.set(payload.worldId, list);
+    await this.appendJsonl('events', payload);
   }
 
   async getWorldEventCount(worldId: string): Promise<number> {
@@ -73,10 +183,12 @@ class InMemoryPersistence implements Persistence {
 
   async saveEvolutionStats(payload: EvolutionStatsPayload): Promise<void> {
     this.evolutionStats.push(payload);
+    await this.appendJsonl('evolution', payload);
   }
 
   async saveExperimentMetadata(payload: ExperimentMetadataPayload): Promise<void> {
     this.experimentMetadata.push(payload);
+    await this.appendJsonl('experiments', payload);
   }
 }
 
@@ -89,7 +201,10 @@ export function createPersistenceFromEnv(): Persistence {
   if (driver === 'redis' && process.env.AETHERIUS_REDIS_URL) {
     return createRedisPersistence();
   }
-  return new InMemoryPersistence();
+  const persistFlag = process.env.AETHERIUS_INMEMORY_PERSIST ?? '1';
+  const persistToDisk = persistFlag === '1';
+  const dir = process.env.AETHERIUS_INMEMORY_PERSIST_DIR || path.join(process.cwd(), 'data', 'persistence');
+  return new InMemoryPersistence({ persistToDisk, dir });
 }
 
 function createMongoPersistence(): Persistence {
