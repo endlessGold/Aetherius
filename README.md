@@ -27,7 +27,7 @@ npm start -- --mode server
 - **기하학적 생존 역학(선택)**: 점·선·면(Vertic/Edges/Poly) 기반 생명 조건, 식물=광합성·가공·영양분 경쟁, 동물=거래, 유전 학습·군집·환경 배율 ([docs/ECONOMY_BIO_SPEC.md](docs/ECONOMY_BIO_SPEC.md))
 - **공간/네트워크(현재)**: 장소(Place) 네트워크로 이동 흔적을 그래프(노드/엣지)로 축적
 - **멀티월드/웜홀(현재)**: World 간 연결/이동 이벤트로 세계를 분할·연결
-- **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 AutoGod/과학자 리포트/이벤트 오케스트레이션
+- **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 AutoSystem/과학자 리포트/이벤트 오케스트레이션
 
 ## 0. 한눈에 보는 설계 (Quick Design Overview)
 
@@ -278,7 +278,7 @@ npm start -- --mode server
   - `.env.example` 참고. API 키는 [Aetherius-Secrets](https://github.com/endlessGold/Aetherius-Secrets) 또는 로컬 `.env`에만 보관합니다.
   - (선택) `GEMINI_MODEL=gemini-1.5-flash` — 기본값은 `gemini-1.5-flash`입니다.
 - 사용하는 기능
-  - `auto_god on` (AI God 개입)
+  - `auto_god on` (AI 최고권한시스템 개입)
   - `ai_events on` (AI 이벤트 오케스트레이터)
   - `ask_science <query>` (과학자 리포트)
 

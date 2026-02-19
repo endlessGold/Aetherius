@@ -71,7 +71,7 @@ node dist/main.js --mode=cli --worlds=Alpha,Beta
 | `oracle` | 월드 조언 |
 | `watch <id>` | 엔티티 관찰 |
 | `map [life]` | 월드 맵 |
-| `auto_god <on\|off>` | AI 신 자동 개입 |
+| `auto_system <on\|off>` | AI 최고권한시스템 자동 개입 |
 | `explore_loc [list]` | 장소 탐색 |
 | `ask_science <question>` | 과학자 위원회 질의(LLM) |
 | `ai_events <on\|off>` | AI 이벤트 처리 |
@@ -299,7 +299,11 @@ npm run dataset:cli -- apiBase=http://localhost:3000/api duration=60 cycle=200
 - 서버 API로 명령을 보낼 때는 동일한 명령 문자열을 API 엔드포인트에 전달하면 됩니다 (서버 라우터 참고).
 
 ---
-
+export namespace Environment {
+  export const Layer = EnvironmentLayer;
+  export type LayerEnum = EnvironmentLayer;
+  export type Grid = EnvironmentGrid;
+}
 ## 5. 게임 플레이 명세 (CLI 전용)
 
 Aetherius에서 설계되는 모든 게임/시뮬레이션은 **CLI만으로 100% 플레이 가능**해야 합니다.

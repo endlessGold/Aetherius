@@ -164,6 +164,6 @@ export class EnvironmentGrid {
 
 export namespace Environment {
   export const Layer = EnvironmentLayer;
-  export type Layer = EnvironmentLayer;
+  export type LayerEnum = EnvironmentLayer;
   export type Grid = EnvironmentGrid;
 }

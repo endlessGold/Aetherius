@@ -57,11 +57,11 @@ Phase 3: Final Synthesis
 - **life_science_discover**: CLI 명령. taxonomy가 있는 엔티티를 수집해 LifeScienceAgent가 네이밍 제안을 하고, 각 발견을 `species_named` 이벤트로 DB에 저장.
 - **life_science_observe**: CLI 명령. 엔티티/종 요약을 수집해 LifeScienceAgent가 관찰 요약을 생성하고, `life_science_observation` 이벤트로 DB에 저장.
 
-## 5. 과학자 = 신 (God 권한)
+## 5. 과학자 = 최고권한시스템 수준 권한
 
 과학자 페르소나는 가상세계에 대한 **조언**뿐 아니라 **권장 액션(명령)** 을 제안할 수 있다. 클라이언트(CLI 또는 API 호출자)가 **명시적으로 요청**할 때만 해당 명령이 화이트리스트 범위 내에서 실행된다. 즉, 합성 보고서의 "Recommended Actions"는 기본적으로 제안만 하며, `--execute`(CLI) 또는 `executeActions: true`(API)가 있을 때만 실행된다.
 
-### 사용 가능한 신의 능력 (권장·실행 허용 목록)
+### 사용 가능한 최고권한시스템 수준 능력 (권장·실행 허용 목록)
 
 | 명령 | 용도 | 인자 예시 |
 |------|------|-----------|
@@ -96,6 +96,5 @@ Phase 3: Final Synthesis
 ## 7. 참고
 
 - [README.md](README.md) — 프로젝트 개요
-- [NARRATIVE_ORCHESTRATION.md](NARRATIVE_ORCHESTRATION.md) — 역사학자·기록학자·스토리텔러 신 협업, API/CLI
-- [src/ai/llmService.ts](../src/ai/llmService.ts) — LLM 호출·재시도
-- [src/command/commandHandler.ts](../src/command/commandHandler.ts) — 신의 능력(명령) 구현·화이트리스트
+- [NARRATIVE_ORCHESTRATION.md](NARRATIVE_ORCHESTRATION.md) — 역사학자·기록학자·스토리텔러 시스템 협업, API/CLI
+- [src/command/commandHandler.ts](../src/command/commandHandler.ts) — 최고권한시스템 수준 능력(명령) 구현·화이트리스트

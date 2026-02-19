@@ -3,7 +3,7 @@ import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
 import { EnvironmentLayer } from '../environment/environmentGrid.js';
 import { Environment } from '../events/eventTypes.js';
 
-export class AutoGodSystem {
+export class AutoSystem {
   private world: World;
   private llm: LLMService;
   private isEnabled: boolean = false;
@@ -17,7 +17,7 @@ export class AutoGodSystem {
 
   toggle(enabled: boolean) {
     this.isEnabled = enabled;
-    console.log(`🤖 [AUTO GOD] System is now ${enabled ? 'ACTIVE' : 'DORMANT'}.`);
+    console.log(`🤖 [AUTO SYSTEM] System is now ${enabled ? 'ACTIVE' : 'DORMANT'}.`);
   }
 
   async tick() {
@@ -34,7 +34,7 @@ export class AutoGodSystem {
 
     // Construct Prompt
     const prompt = `
-    You are the AI God of a simulation. Analyze the current state and choose ONE divine intervention.
+    You are the AI Highest Authority System of a simulation. Analyze the current state and choose ONE system-level intervention.
 
     CURRENT STATE:
     - Tick: ${state.tick}
@@ -58,13 +58,13 @@ export class AutoGodSystem {
     `;
 
     // Call LLM
-    console.log(`🤖 [AUTO GOD] Contemplating...`);
+    console.log(`🤖 [AUTO SYSTEM] Contemplating...`);
     const decision = await this.llm.generateDecision(prompt, null);
 
     if (decision) {
       await this.executeDecision(decision);
     } else {
-      console.log(`🤖 [AUTO GOD] The spirits were silent (LLM Error).`);
+      console.log(`🤖 [AUTO SYSTEM] The system remained silent (LLM Error).`);
     }
   }
 
@@ -102,15 +102,15 @@ export class AutoGodSystem {
   }
 
   private async executeDecision(decision: any) {
-    console.log(`🤖 [AUTO GOD] Decision: ${decision.action.toUpperCase()} - "${decision.reason}"`);
+    console.log(`🤖 [AUTO SYSTEM] Decision: ${decision.action.toUpperCase()} - "${decision.reason}"`);
 
-    // Save log (Placeholder for DB)
+    // Save log (DB telemetry)
     this.world.persistence.saveWorldEvent({
       worldId: this.world.id,
       tick: this.world.tickCount,
       type: 'OTHER',
       location: { x: 0, y: 0 },
-      details: `[AUTO_GOD] ${decision.action}: ${decision.reason}`
+      details: `[AUTO_SYSTEM] ${decision.action}: ${decision.reason}`
     }).catch(e => { });
 
     switch (decision.action) {
@@ -119,7 +119,7 @@ export class AutoGodSystem {
         // For now, direct implementation for simplicity
         if (decision.target) {
           this.world.environment.add(decision.target.x, decision.target.y, EnvironmentLayer.Temperature, 100);
-          console.log(`⚡ [AUTO GOD] Smited location (${decision.target.x}, ${decision.target.y})`);
+          console.log(`⚡ [AUTO SYSTEM] Smited location (${decision.target.x}, ${decision.target.y})`);
         }
         break;
       case 'bless':
@@ -127,15 +127,15 @@ export class AutoGodSystem {
           const c = (e.children[0] as any).components;
           if (c.vitality) c.vitality.hp = 100;
         });
-        console.log(`✨ [AUTO GOD] Blessed the world.`);
+        console.log(`✨ [AUTO SYSTEM] Blessed the world.`);
         break;
       case 'flood':
         this.world.eventBus.publish(new Environment.GlobalParameterChange(EnvironmentLayer.SoilMoisture, 0.5, 'AutoGodSystem'));
-        console.log(`🌊 [AUTO GOD] Brought the rain.`);
+        console.log(`🌊 [AUTO SYSTEM] Brought the rain.`);
         break;
       case 'none':
       default:
-        console.log(`🍃 [AUTO GOD] Watches silently.`);
+        console.log(`🍃 [AUTO SYSTEM] Watches silently.`);
         break;
     }
   }
