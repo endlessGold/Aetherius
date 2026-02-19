@@ -1,10 +1,31 @@
 import 'dotenv/config';
+import fs from 'node:fs';
+import path from 'node:path';
 import { AssembleManager } from './entities/assembly.js';
 import { CommandHandler } from './app/commandHandler.js';
 import { CLI } from './app/cli.js';
 import { Server } from './app/server/server.js';
 import { universeRegistry } from './core/space/universeRegistry.js';
 import { createWorldWithAssembly, seedWorlds, type WorldWithAssembly } from './bootstrap/worldBootstrap.js';
+
+async function cleanupRuntimeArtifacts() {
+  const cleanOnStart = (process.env.AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START ?? '1') === '1';
+  if (!cleanOnStart) return;
+
+  const root = process.cwd();
+  const reportsDir = path.join(root, 'data', 'reports');
+  try {
+    const entries = await fs.promises.readdir(reportsDir, { withFileTypes: true });
+    await Promise.all(
+      entries
+        .filter((e) => e.isFile() && e.name.endsWith('.jsonl'))
+        .map((e) =>
+          fs.promises.unlink(path.join(reportsDir, e.name)).catch(() => { })
+        )
+    );
+  } catch {
+  }
+}
 
 function parseArgs(): { worldIds: string[]; mode: string } {
   const args = process.argv.slice(2);
@@ -21,6 +42,7 @@ function parseArgs(): { worldIds: string[]; mode: string } {
 }
 
 async function main() {
+  await cleanupRuntimeArtifacts();
   console.log('🌌 Initializing Aetherius Engine Core...');
 
   const { worldIds, mode } = parseArgs();

@@ -111,36 +111,28 @@ npm start -- --mode server
 ### 예제
 
 ```ts
-import { AssembleManager, BehaviorNode, Entity, SystemEvent, UpdateContext } from './src/entities/assembly.js';
-import { World } from './src/core/world.js';
+import { AssembleManager } from './src/entities/assembly.js';
+import { createWorldWithAssembly, seedWorlds, type WorldWithAssembly } from './src/bootstrap/worldBootstrap.js';
+import { universeRegistry } from './src/core/space/universeRegistry.js';
 
-type DroneData = {
-  position: { x: number; y: number };
-  energy: { value: number };
-};
+const worldIds = ['Alpha', 'Beta', 'Gamma'];
+const weatherTypes = ['Weather_Sunny_001', 'Weather_Rainy_001', 'Weather_Drought_001'];
 
-class DroneBehavior extends BehaviorNode<DroneData> {
-  constructor(components: DroneData) {
-    super(components);
-    this.on(SystemEvent.ListenUpdate, (c, context: UpdateContext) => {
-      c.energy.value = Math.max(0, c.energy.value - 0.1 * context.deltaTime);
-      c.position.x += 0.5 * context.deltaTime;
-    });
-  }
-}
+const worlds: WorldWithAssembly[] = worldIds.map((id, index) => {
+  const manager = new AssembleManager();
+  const weatherType = weatherTypes[index % weatherTypes.length];
+  const created = createWorldWithAssembly(id, weatherType, manager);
+  universeRegistry.registerWorld({
+    worldId: created.world.id,
+    world: created.world,
+    manager: created.manager
+  });
+  return created;
+});
 
-const manager = new AssembleManager();
-const world = new World('Example');
+seedWorlds(worlds);
 
-manager.createEntity(Entity, 'Drone_001', [], [
-  {
-    NodeClass: DroneBehavior,
-    components: { position: { x: 0, y: 0 }, energy: { value: 100 } }
-  }
-]);
-
-manager.listenUpdate({ world, deltaTime: 1.0 });
-manager.update();
+await worlds[0].world.tick();
 ```
 
 ## 2.7 Behavior Function Pattern (동작 함수 패턴)
@@ -291,6 +283,7 @@ npm start -- --mode server
   - `AETHERIUS_AUTH_PASSWORD` (임의의 강한 비밀번호)
   - `AETHERIUS_AUTH_SECRET` (긴 랜덤 문자열, JWT 서명 키)
   - DB 연동 시 추가: `AETHERIUS_NOSQL_DRIVER=mongodb`, `AETHERIUS_MONGODB_URI`(Atlas 연결 문자열), `AETHERIUS_MONGODB_DB`(예: `aetherius`)
+  - 텔레메트리 JSONL 관리: `AETHERIUS_TELEMETRY_JSONL=1`이면 `data/reports/*.jsonl`에 텔레메트리를 기록하고, `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START`(기본 `1`)가 `1`일 때 엔진 시작 시 기존 JSONL을 자동 삭제한다.
 - 엔드포인트
   - `POST /api/login` `{ "username": "...", "password": "..." }`
   - `POST /api/tick` `{ "count": 1 }`

@@ -62,6 +62,7 @@
   - **동물·식물·세포 “현재 상태”** → 매 tick `TickSnapshot` (`nodes` + `entities`).
   - **전염병·사망·분해·계절·이동·하이브리드·다큐멘터리·과학자·AI·웜홀 등 “이벤트”** → 모두 `WorldEventPayload`로 DB에 저장.
   - 로컬 JSONL(`ecosystem.jsonl`, `documentary.jsonl`, `ai_event_decisions.jsonl`, `science_reports.jsonl`, `wormholes.jsonl` 등)은 **동일 데이터를 파일로 복제하는 보조 텔레메트리**이며, DB 저장 경로를 대체하지 않는다.
+  - `AETHERIUS_TELEMETRY_CLEAN_JSONL_ON_START=1`(기본값)이면 엔진 시작 시 `data/reports/*.jsonl`은 자동 삭제되고, 새 세션 텔레메트리만 다시 기록된다.
 
 ## 3. 드라이버별 구조
 

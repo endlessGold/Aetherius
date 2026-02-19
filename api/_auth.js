@@ -1,6 +1,22 @@
 import { SignJWT, jwtVerify } from 'jose';
 import crypto from 'crypto';
 
+export async function verifyRequest(req) {
+  const header = req.headers.authorization || req.headers.Authorization;
+  const token = typeof header === 'string' && header.startsWith('Bearer ')
+    ? header.slice('Bearer '.length)
+    : null;
+  if (!token) return { ok: false, status: 401, message: 'Missing Authorization: Bearer <token>' };
+
+  try {
+    const secret = getSecret();
+    const { payload } = await jwtVerify(token, secret);
+    return { ok: true, subject: payload.sub || 'user', roles: payload.roles || ['player'] };
+  } catch {
+    return { ok: false, status: 401, message: 'Invalid token' };
+  }
+}
+
 function getSecret() {
   const raw = process.env.AETHERIUS_AUTH_SECRET;
   if (!raw) throw new Error('AETHERIUS_AUTH_SECRET is not set');
@@ -21,20 +37,6 @@ export async function issueToken(subject, roles = ['player']) {
     .setIssuedAt()
     .setExpirationTime('12h')
     .sign(secret);
-}
-
-export async function verifyRequest(req) {
-  const header = req.headers.authorization || req.headers.Authorization;
-  const token = typeof header === 'string' && header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-  if (!token) return { ok: false, status: 401, message: 'Missing Authorization: Bearer <token>' };
-
-  try {
-    const secret = getSecret();
-    const { payload } = await jwtVerify(token, secret);
-    return { ok: true, subject: payload.sub || 'user', roles: payload.roles || ['player'] };
-  } catch {
-    return { ok: false, status: 401, message: 'Invalid token' };
-  }
 }
 
 export function verifyPassword(username, password) {
