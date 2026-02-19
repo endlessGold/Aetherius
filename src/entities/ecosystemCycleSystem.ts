@@ -1,3 +1,5 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import { AssembleManager } from './assembly.js';
 import { World } from '../core/world.js';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
@@ -110,6 +112,36 @@ export class EcosystemCycleSystem {
       byPlace[placeId] = (byPlace[placeId] || 0) + 1;
     }
     return { byPlace, activeTargets: this.migrationTargetByEntity.size };
+  }
+
+  /** 생태 이벤트를 persistence에 저장하고, 필요 시 JSONL 파일에 추가 (텔레메트리 강화) */
+  private async recordTelemetry(
+    world: World,
+    kind: string,
+    location: { x: number; y: number },
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    const details = JSON.stringify({ kind, tick: world.tickCount, ...payload });
+    await world.persistence.saveWorldEvent({
+      worldId: world.id,
+      tick: world.tickCount,
+      type: 'OTHER',
+      location,
+      details
+    });
+    if (world.config.telemetry.writeJsonlToDisk) {
+      try {
+        const dir = path.join(process.cwd(), 'data', 'reports');
+        await fs.mkdir(dir, { recursive: true });
+        await fs.appendFile(
+          path.join(dir, 'ecosystem.jsonl'),
+          `${JSON.stringify({ worldId: world.id, tick: world.tickCount, kind, ...payload })}\n`,
+          'utf8'
+        );
+      } catch (_) {
+        // ignore disk write failure
+      }
+    }
   }
 
   private async tickSeason(world: World) {
@@ -353,10 +385,18 @@ export class EcosystemCycleSystem {
 
         if (c.vitality?.hp != null && c.vitality.hp <= 0) {
           world.eventBus.publish(new Biological.DiedOfDisease(entity.id, disease.strainId || 'Unknown', 'EcosystemCycleSystem'));
+          await this.recordTelemetry(world, 'death_of_disease', { x: pos.x, y: pos.y }, {
+            entityId: entity.id,
+            strainId: disease.strainId || 'Unknown'
+          });
         } else if (world.random01() < 0.02 + disease.immunity * 0.05) {
           disease.status = 'R';
           disease.load = 0;
           world.eventBus.publish(new Biological.Recovered(entity.id, disease.strainId || 'Unknown', 'EcosystemCycleSystem'));
+          await this.recordTelemetry(world, 'recovered', { x: pos.x, y: pos.y }, {
+            entityId: entity.id,
+            strainId: disease.strainId || 'Unknown'
+          });
         }
       } else if (disease.status === 'R') {
         disease.immunity = clamp01(disease.immunity - 0.0005);
@@ -560,8 +600,17 @@ export class EcosystemCycleSystem {
     }
 
     if (toRemove.length > 0) {
-      for (const corpse of toRemove) manager.releaseEntity(corpse);
+      for (const corpse of toRemove) {
+        const c = (corpse.children?.[0] as any)?.components;
+        if (c?.position) {
+          await this.recordTelemetry(world, 'decomposition_complete', { x: c.position.x, y: c.position.y }, {
+            corpseId: corpse.id,
+            createdTick: c.createdTick,
+            finalBiomass: c.biomass ?? 0
+          });
+        }
+        manager.releaseEntity(corpse);
+      }
     }
-
   }
 }

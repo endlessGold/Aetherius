@@ -1,4 +1,3 @@
-import { EventLoop } from './eventLoop.js';
 import { EventBus } from './events/eventBus.js'; // New Event System
 import { System } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
@@ -22,7 +21,6 @@ import { loadWorldConfig } from './config/worldConfig.js';
 export class World {
     constructor(id, options) {
         this.nodes = new Map();
-        this.eventLoop = new EventLoop(); // Legacy, to be migrated
         this.eventBus = new EventBus(); // New Advanced Event System
         this.tickCount = 0;
         this.idSeq = 0;
@@ -90,8 +88,7 @@ export class World {
         this.isTicking = true;
         try {
             this.tickCount += 1;
-            // 1. Process Legacy Event Loop (Global events)
-            this.eventLoop.tick();
+            // AsyncRequest 등 명령은 EventBus 큐에서 processQueue() 시 처리됨 (EventLoop 레거시 대체)
             const tickPayload = this.tickPayloadProvider();
             this.eventBus.publish(new System.Tick(this.tickCount, 1, tickPayload.environment));
             // 2. Process New Event Bus Queue

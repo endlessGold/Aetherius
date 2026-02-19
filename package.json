@@ -22,7 +22,12 @@
     "smoke:science": "npm run build && node tools/smoke.js science",
     "experiment:science": "npm run build && node tools/run_science_experiment.js",
     "experiment:db": "npm run build && node tools/run_db_hosting_experiment.js",
+    "experiment:economy": "npm run build && node tools/run_economy_evolution.js",
+    "experiment:narrative": "npm run build && node tools/run_narrative_experiment.js",
+    "experiment:all": "npm run smoke && npm run verify:phase1 && npm run experiment:db && npm run experiment:economy",
+    "verify:phase1": "npm run build && node tools/run_phase1_verification.js",
     "dataset:cli": "node tools/run_headless.js",
+    "dataset:export": "npm run build && node tools/export_dataset.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

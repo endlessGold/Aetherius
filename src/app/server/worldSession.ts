@@ -46,7 +46,7 @@ export class WorldSession {
                 reject
             });
 
-            this.world.eventLoop.emit(event);
+            this.world.eventBus.publish(event);
         });
     }
 

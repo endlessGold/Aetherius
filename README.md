@@ -24,6 +24,7 @@ npm start -- --mode server
 - **환경/물리(현재)**: 대규모 EnvironmentGrid(레이어) + 확산/이류 기반 업데이트
 - **기후/수문(현재/확장)**: 날씨/계절 엔티티 기반 강제력(forcing) → 환경 레이어에 반영(확장 가능)
 - **생명/생태(현재)**: 식물 성장, 크리처 행동/이동(Goal GA), 질병/사체/분해 사이클
+- **기하학적 생존 역학(선택)**: 점·선·면(Vertic/Edges/Poly) 기반 생명 조건, 식물=광합성·가공·영양분 경쟁, 동물=거래, 유전 학습·군집·환경 배율 ([docs/ECONOMY_BIO_SPEC.md](docs/ECONOMY_BIO_SPEC.md))
 - **공간/네트워크(현재)**: 장소(Place) 네트워크로 이동 흔적을 그래프(노드/엣지)로 축적
 - **멀티월드/웜홀(현재)**: World 간 연결/이동 이벤트로 세계를 분할·연결
 - **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 AutoGod/과학자 리포트/이벤트 오케스트레이션
@@ -82,6 +83,7 @@ npm start -- --mode server
 - **환경/물리**: EnvironmentGrid 레이어(열/수분/영양 등)를 확산/이류로 갱신
 - **기후/계절**: Weather/Season 강제력이 레이어에 반영되도록 연결(현 구조는 확장 전제)
 - **생명/행동/생태**: 식물 성장, 크리처 행동/이동(Goal GA), 질병/사체/분해 사이클
+- **기하학적 생존 역학(선택)**: Vertic/Edges/Poly 기반 생명 조건·행동 은유(광합성·가공·거래), 유전 학습·환경 배율. Tick/EventBus 연동 확장 가능 ([CODE_RULES.md](CODE_RULES.md) §8 Bio-Logic)
 - **공간/네트워크**: Place/Maze 그래프 축적, 멀티월드/웜홀 이벤트로 세계 연결
 - **개입/자동화(선택)**: 드론/액추에이터 + 로컬 LLM 기반 오케스트레이션
 
@@ -207,12 +209,14 @@ src/
   command/      명령 파싱·실행(commandHandler), 명령 레지스트리·핸들러(commands/)
   core/         월드/이벤트/환경/시스템(physics, sensor, wormhole, maze 등)
   entities/     AssembleManager 기반 엔티티 조립(plant/creature/weather/ecosystem)
+  economy/       기하학적 생존 역학(Vertic/Edges/Poly), 생태 엔진·유전 학습·군집·환경
   bootstrap/    월드 생성·어셈블·시드(createWorldWithAssembly, seedWorlds)
   ai/           로컬 LLM 어댑터 + Science/AI 오케스트레이터
 api/            (Vercel) 서버리스 엔드포인트 + JWT 인증
 public/         (Vercel) 브라우저 콘솔 UI
-tools/          smoke.js, run_headless.js(dataset CLI), httpSmoke.js
-docs/           Phase 문서, 재설계/리팩터 가이드(DESIGN_REFACTOR.md), CLI 사용법(CLI_USAGE.md)
+tools/          smoke.js, run_headless.js(dataset CLI), run_economy_evolution.js 등
+docs/           아키텍처(ARCHITECTURE.md), CLI 사용법(CLI_USAGE.md), DB 호스팅(DB_HOSTING.md),
+                이벤트 정책(EVENT_POLICY.md), 생태 명세(ECONOMY_BIO_SPEC.md), 시크릿(SECRETS_REF.md)
 ```
 
 ---
@@ -275,11 +279,12 @@ npm start -- --mode server
 ### 4.4 Vercel 배포(헤드리스 API + 브라우저 로그인)
 - 이 레포는 Vercel의 Serverless Function(`/api/*`)로 헤드리스 백엔드를 호스팅할 수 있습니다.
 - 브라우저 로그인/인증은 `/api/login` → Bearer 토큰 발급 → 이후 `/api/*` 호출 시 `Authorization: Bearer <token>`을 사용합니다.
-- 주의: Serverless는 인스턴스가 재시작되면 메모리 상태가 초기화될 수 있어, 월드 상태가 리셋될 수 있습니다. 장기 상태가 필요하면 별도 저장소(예: Redis/MongoDB)에 스냅샷을 저장하는 방식으로 확장합니다.
+- 주의: Serverless는 인스턴스가 재시작되면 메모리 상의 월드가 초기화될 수 있습니다. **Vercel 환경변수에 DB 설정을 넣으면** 스냅샷·이벤트·진화 통계는 MongoDB Atlas에 저장되므로, 장기 상태는 Atlas에 남습니다. 상세는 [DB_HOSTING.md](docs/DB_HOSTING.md)의 "Vercel 배포 시 DB 연동" 절을 참고하세요.
 - Vercel 환경변수(필수)
   - `AETHERIUS_AUTH_USERNAME` (기본 `admin`)
   - `AETHERIUS_AUTH_PASSWORD` (임의의 강한 비밀번호)
   - `AETHERIUS_AUTH_SECRET` (긴 랜덤 문자열, JWT 서명 키)
+  - DB 연동 시 추가: `AETHERIUS_NOSQL_DRIVER=mongodb`, `AETHERIUS_MONGODB_URI`(Atlas 연결 문자열), `AETHERIUS_MONGODB_DB`(예: `aetherius`)
 - 엔드포인트
   - `POST /api/login` `{ "username": "...", "password": "..." }`
   - `POST /api/tick` `{ "count": 1 }`
@@ -295,7 +300,7 @@ npm start -- --mode server
 1.  **No Abbreviations**: `Sim` 대신 `Simulation`, `Env` 대신 `Environment` 사용. 명확성이 길이보다 우선함.
 2.  **Source of Truth**: GitHub 리포지토리를 유일한 진실의 원천(Single Source of Truth)으로 관리.
 3.  **Security**: 민감한 정보(SSH Key 등)는 프라이빗 서브모듈([Aetherius-Secrets](https://github.com/EndlessGames/Aetherius-Secrets))로 분리하여 관리.
-4.  **Automation**: `auto-sync.ps1` 스크립트를 통해 공용 환경에서도 안전하게 작업 동기화.
+4.  **Automation**: 작업 동기화는 Git 기반. 일회용 스크립트는 [CODE_RULES.md](CODE_RULES.md) §7에 따라 `_temp/` 등 별도 폴더에 두고 `.gitignore`로 제외할 수 있음.
 5.  **Code Rules**: 구현/용어 기준은 [CODE_RULES.md](CODE_RULES.md)를 따른다. (이 프로젝트의 “ECS”는 전통적 일괄처리 ECS가 아니라 이벤트 기반 하이브리드 의미)
 
 ---

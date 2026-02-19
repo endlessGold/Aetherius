@@ -1,9 +1,9 @@
 import { World } from '../dist/core/world.js';
 import { AssembleManager } from '../dist/entities/assembly.js';
 import { createEntityByAssemblyWithManager } from '../dist/entities/catalog.js';
-import { CommandHandler } from '../dist/interface/commandHandler.js';
+import { CommandHandler } from '../dist/app/commandHandler.js';
 import { universeRegistry } from '../dist/core/space/universeRegistry.js';
-import { WorldSession } from '../dist/server/worldSession.js';
+import { WorldSession } from '../dist/app/server/worldSession.js';
 
 let state = null;
 

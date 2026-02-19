@@ -9,6 +9,7 @@ import { createEntityByAssemblyWithManager } from '../entities/catalog.js';
 import { AssembleManager } from '../entities/assembly.js';
 import { EvolutionSystem } from '../entities/evolutionSystem.js';
 import { EcosystemCycleSystem } from '../entities/ecosystemCycleSystem.js';
+import { EconomySystem } from '../core/systems/economySystem.js';
 import type { WeatherData } from '../components/entityData.js';
 
 export interface WorldWithAssembly {
@@ -17,10 +18,13 @@ export interface WorldWithAssembly {
   manager: AssembleManager;
 }
 
-/** World에 evolution/ecosystem 훅을 붙인 뒤, 확장된 tick을 사용하도록 함. */
+/** World에 evolution/ecosystem/economy 훅을 붙인 뒤, 확장된 tick을 사용하도록 함. */
 function assemble(world: World, manager: AssembleManager): void {
   const evolutionSystem = new EvolutionSystem();
   const ecosystemSystem = new EcosystemCycleSystem();
+  const economySystem = new EconomySystem({
+    enabled: (process.env.AETHERIUS_ECONOMY_ENABLED || '0') === '1',
+  });
 
   (world as World & { ecosystemSystem?: EcosystemCycleSystem }).ecosystemSystem = ecosystemSystem;
 
@@ -31,6 +35,7 @@ function assemble(world: World, manager: AssembleManager): void {
     manager.update();
     evolutionSystem.tick(manager, world);
     await ecosystemSystem.tick(manager, world);
+    economySystem.tick(world);
 
     if (world.tickCount % 60 === 0) {
       console.log(`\n--- Tick ${world.tickCount} Entity Status ---`);

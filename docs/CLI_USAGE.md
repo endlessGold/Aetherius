@@ -294,6 +294,6 @@ npm run dataset:cli -- apiBase=http://localhost:3000/api duration=60 cycle=200
 
 ## 참고
 
-- 아키텍처 개요: [docs/ARCHITECTURE.md](ARCHITECTURE.md)  
-- 재설계·개선 계획: [docs/DESIGN_REFACTOR.md](DESIGN_REFACTOR.md)  
+- 아키텍처 개요: [ARCHITECTURE.md](ARCHITECTURE.md)  
+- 로드맵·실험 계획: [ROADMAP.md](../ROADMAP.md), [EXPERIMENTS.md](EXPERIMENTS.md)  
 - 서버 API로 명령을 보낼 때는 동일한 명령 문자열을 API 엔드포인트에 전달하면 됩니다 (서버 라우터 참고).

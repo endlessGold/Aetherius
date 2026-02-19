@@ -10,8 +10,7 @@ export class Server {
         this.app = express();
         // Initialize World System
         this.worldManager = new WorldManager();
-        // Use the handler's world as the default world
-        const defaultWorld = handler.world;
+        const defaultWorld = handler.getWorld();
         this.session = new WorldSession(defaultWorld);
         this.asyncCommandHandler = new AsyncCommandHandler(defaultWorld, handler);
         // Register handlers to the event loop

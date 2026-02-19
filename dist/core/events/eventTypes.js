@@ -1,4 +1,3 @@
-// 이벤트 카테고리 정의
 export var EventCategory;
 (function (EventCategory) {
     EventCategory["System"] = "System";
@@ -6,8 +5,8 @@ export var EventCategory;
     EventCategory["Biological"] = "Biological";
     EventCategory["Interaction"] = "Interaction";
     EventCategory["Command"] = "Command";
+    EventCategory["Economy"] = "Economy";
 })(EventCategory || (EventCategory = {}));
-// 추상화된 최상위 이벤트 정의 (Simulation Namespace)
 export var Simulation;
 (function (Simulation) {
     let seq = 0;
@@ -25,8 +24,7 @@ export var Simulation;
     }
     Simulation.Event = Event;
 })(Simulation || (Simulation = {}));
-// --- 네임스페이스 기반 이벤트 구조 ---
-// 환경/물리 (Environment/Physics)
+// --- Environment / Physics ---
 export var Environment;
 (function (Environment) {
     class Event extends Simulation.Event {
@@ -36,19 +34,15 @@ export var Environment;
     }
     Environment.Event = Event;
     class WeatherChange extends Event {
-        constructor(layer, delta, x, y) {
-            super({ layer, delta, x, y });
-        }
+        constructor(layer, delta, x, y) { super({ layer, delta, x, y }); }
     }
     Environment.WeatherChange = WeatherChange;
     class GlobalParameterChange extends Event {
-        constructor(layer, delta, sourceId) {
-            super({ layer, delta }, sourceId, 2);
-        }
+        constructor(layer, delta, sourceId) { super({ layer, delta }, sourceId, 2); }
     }
     Environment.GlobalParameterChange = GlobalParameterChange;
 })(Environment || (Environment = {}));
-// 생물 (Biological)
+// --- Biological ---
 export var Biological;
 (function (Biological) {
     class Event extends Simulation.Event {
@@ -70,27 +64,19 @@ export var Biological;
     }
     Biological.EntityMoved = EntityMoved;
     class InfectionExposed extends Event {
-        constructor(entityId, strainId, load, sourceId) {
-            super({ entityId, strainId, load }, sourceId, 1);
-        }
+        constructor(entityId, strainId, load, sourceId) { super({ entityId, strainId, load }, sourceId, 1); }
     }
     Biological.InfectionExposed = InfectionExposed;
     class InfectionContracted extends Event {
-        constructor(entityId, strainId, sourceId) {
-            super({ entityId, strainId }, sourceId, 1);
-        }
+        constructor(entityId, strainId, sourceId) { super({ entityId, strainId }, sourceId, 1); }
     }
     Biological.InfectionContracted = InfectionContracted;
     class Recovered extends Event {
-        constructor(entityId, strainId, sourceId) {
-            super({ entityId, strainId }, sourceId, 1);
-        }
+        constructor(entityId, strainId, sourceId) { super({ entityId, strainId }, sourceId, 1); }
     }
     Biological.Recovered = Recovered;
     class DiedOfDisease extends Event {
-        constructor(entityId, strainId, sourceId) {
-            super({ entityId, strainId }, sourceId, 2);
-        }
+        constructor(entityId, strainId, sourceId) { super({ entityId, strainId }, sourceId, 2); }
     }
     Biological.DiedOfDisease = DiedOfDisease;
     class NewStrainDiscovered extends Event {
@@ -124,7 +110,7 @@ export var Biological;
     }
     Biological.HybridOffspringBorn = HybridOffspringBorn;
 })(Biological || (Biological = {}));
-// 상호작용 (Interaction)
+// --- Interaction ---
 export var Interaction;
 (function (Interaction) {
     class Event extends Simulation.Event {
@@ -134,27 +120,19 @@ export var Interaction;
     }
     Interaction.Event = Event;
     class Eat extends Event {
-        constructor(targetId, amount, sourceId) {
-            super({ targetId, amount }, sourceId);
-        }
+        constructor(targetId, amount, sourceId) { super({ targetId, amount }, sourceId); }
     }
     Interaction.Eat = Eat;
     class Attack extends Event {
-        constructor(targetId, damage, sourceId) {
-            super({ targetId, damage }, sourceId);
-        }
+        constructor(targetId, damage, sourceId) { super({ targetId, damage }, sourceId); }
     }
     Interaction.Attack = Attack;
     class Mate extends Event {
-        constructor(targetId, sourceId) {
-            super({ targetId }, sourceId);
-        }
+        constructor(targetId, sourceId) { super({ targetId }, sourceId); }
     }
     Interaction.Mate = Mate;
     class Communicate extends Event {
-        constructor(message, targetId, sourceId) {
-            super({ targetId, message }, sourceId);
-        }
+        constructor(message, targetId, sourceId) { super({ targetId, message }, sourceId); }
     }
     Interaction.Communicate = Communicate;
     class InterspeciesMatingAttempted extends Event {
@@ -164,7 +142,7 @@ export var Interaction;
     }
     Interaction.InterspeciesMatingAttempted = InterspeciesMatingAttempted;
 })(Interaction || (Interaction = {}));
-// 시스템 (System)
+// --- System ---
 export var System;
 (function (System) {
     class Event extends Simulation.Event {
@@ -174,9 +152,7 @@ export var System;
     }
     System.Event = Event;
     class Tick extends Event {
-        constructor(tickCount, deltaTime, environment) {
-            super({ tickCount, deltaTime, environment });
-        }
+        constructor(tickCount, deltaTime, environment) { super({ tickCount, deltaTime, environment }); }
     }
     System.Tick = Tick;
     class ParameterChange extends Event {
@@ -192,9 +168,7 @@ export var System;
     }
     System.AIAgentSense = AIAgentSense;
     class ChangeWeather extends Event {
-        constructor(payload) {
-            super(payload, undefined, 1);
-        }
+        constructor(payload) { super(payload, undefined, 1); }
     }
     System.ChangeWeather = ChangeWeather;
     class AsyncRequest extends Event {
@@ -210,9 +184,7 @@ export var System;
     }
     System.WormholeOpened = WormholeOpened;
     class WormholeClosed extends Event {
-        constructor(wormholeId, a, b, sourceId) {
-            super({ wormholeId, a, b }, sourceId, 2);
-        }
+        constructor(wormholeId, a, b, sourceId) { super({ wormholeId, a, b }, sourceId, 2); }
     }
     System.WormholeClosed = WormholeClosed;
     class WormholeTravel extends Event {
@@ -228,7 +200,31 @@ export var System;
     }
     System.SeasonChanged = SeasonChanged;
 })(System || (System = {}));
-// 명령 (Command)
+// --- Economy (Vertic/Edges/Poly, Tick 연동) ---
+export var Economy;
+(function (Economy) {
+    class Event extends Simulation.Event {
+        constructor(payload, sourceId, priority = 1) {
+            super(EventCategory.Economy, payload, sourceId, priority);
+        }
+    }
+    Economy.Event = Event;
+    /** 행동 수행 시 (economy 스텝 연동). */
+    class ActionApplied extends Event {
+        constructor(entityId, actionKind, tickCount, sourceId) {
+            super({ entityId, actionKind, tickCount }, sourceId, 1);
+        }
+    }
+    Economy.ActionApplied = ActionApplied;
+    /** Vertic=0 파산·기초수급 (관측/로깅). */
+    class DefaultOccurred extends Event {
+        constructor(entityId, rehabCount, sourceId) {
+            super({ entityId, rehabCount }, sourceId, 2);
+        }
+    }
+    Economy.DefaultOccurred = DefaultOccurred;
+})(Economy || (Economy = {}));
+// --- Command ---
 export var Command;
 (function (Command) {
     class Event extends Simulation.Event {
@@ -238,15 +234,11 @@ export var Command;
     }
     Command.Event = Event;
     class EntityCreateRequested extends Event {
-        constructor(id, assemblyType, sourceId) {
-            super({ id, assemblyType }, sourceId, 2);
-        }
+        constructor(id, assemblyType, sourceId) { super({ id, assemblyType }, sourceId, 2); }
     }
     Command.EntityCreateRequested = EntityCreateRequested;
     class AssemblyCreateRequested extends Event {
-        constructor(id, assemblyType, sourceId) {
-            super({ id, assemblyType }, sourceId, 2);
-        }
+        constructor(id, assemblyType, sourceId) { super({ id, assemblyType }, sourceId, 2); }
     }
     Command.AssemblyCreateRequested = AssemblyCreateRequested;
 })(Command || (Command = {}));

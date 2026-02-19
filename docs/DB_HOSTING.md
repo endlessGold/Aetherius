@@ -89,6 +89,25 @@ Aetherius는 **DB 서버를 직접 호스팅하지 않습니다.**
    npm run experiment:db
    ```
 
+### WSL에서 mongosh 설치 (npm, 글로벌)
+
+Atlas 등 MongoDB에 터미널에서 접속하려면 **mongosh**(MongoDB Shell)가 필요합니다. **글로벌 설치**만 사용하며, 프로젝트 `package.json`에는 넣지 않습니다.
+
+1. **전역 설치**
+
+   ```bash
+   npm install -g mongosh
+   ```
+
+2. **연결 예시** (Atlas SRV 주소·사용자·비밀번호는 본인 값으로)
+
+   ```bash
+   mongosh "mongodb+srv://cluster0.xxxxx.mongodb.net/" --apiVersion 1 --username YOUR_USER --password 'YOUR_PASS'
+   ```
+
+   비밀번호에 특수문자가 있으면 작은따옴표로 감싸세요.  
+   설치 없이 한 번만 쓰려면: `npx mongosh "mongodb+srv://..." --username ... --password ...`
+
 ### WSL에서 연동 (브라우저 OAuth 로그인 후)
 
 Atlas는 **계정이 필요**합니다. 이미 브라우저로 로그인(Google/GitHub 등 리다이렉트 OAuth)했다면 그 계정으로 아래만 진행하면 됩니다.
@@ -202,3 +221,49 @@ npm run experiment:db
 
 - 성공 시: `✅ DB 호스팅 연동 정상. (driver=...)` 출력 후 종료 코드 0
 - 실패 시: 연결 오류 메시지와 함께 종료 코드 1 (URI/URL·네트워크·Atlas IP 화이트리스트 확인)
+
+### Vercel 배포 시 DB 연동
+
+백엔드를 Vercel Serverless Functions(`/api/*`)로 둘 때, MongoDB Atlas를 DB 서버로 쓰려면 Vercel 프로젝트에 다음 환경 변수를 넣는다.
+
+1. **Vercel 대시보드** → 프로젝트 선택 → **Settings** → **Environment Variables**
+2. 아래 변수 추가. `AETHERIUS_MONGODB_URI`는 **Sensitive**로 표시해 Secrets에 저장하는 것을 권장한다.
+
+| 변수 | 값 | 비고 |
+|------|-----|------|
+| `AETHERIUS_NOSQL_DRIVER` | `mongodb` | Atlas 사용 시 |
+| `AETHERIUS_MONGODB_URI` | Atlas 연결 문자열 (위 1번 절차에서 복사한 URI) | Secrets 권장 |
+| `AETHERIUS_MONGODB_DB` | `aetherius` (또는 사용할 DB 이름) | 선택, 기본 `aetherius` |
+
+3. 저장 후 **Redeploy** 하면, Serverless 인스턴스에서 `World`가 생성될 때 `createPersistenceFromEnv()`가 MongoDB를 사용한다. `/api/tick`, `/api/command` 등 호출 시 스냅샷·이벤트가 Atlas에 기록된다.
+
+**동작 요약**
+
+- Serverless 인스턴스가 바뀌어도 **스냅샷·이벤트·진화 통계는 Atlas에 영구 저장**된다.
+- 인메모리 월드 상태(엔티티, tick 수 등)는 **요청/인스턴스마다 초기화**될 수 있다. 콜드스타트 시 `World`가 새로 만들어지므로, “이어하기”가 필요하면 추후 “최신 스냅샷 로드 후 World 복원” 단계를 별도 구현해야 한다.
+
+**Vercel + DB 검증 체크리스트**
+
+1. Vercel 프로젝트에 `AETHERIUS_NOSQL_DRIVER=mongodb`, `AETHERIUS_MONGODB_URI`, `AETHERIUS_MONGODB_DB` 설정 후 Redeploy.
+2. 로그인: `POST /api/login`으로 Bearer 토큰 발급.
+3. Tick 호출: `POST /api/tick` body `{ "count": 1 }`, Header `Authorization: Bearer <token>`.
+4. MongoDB Atlas 대시보드에서 해당 DB의 `snapshots`, `world_events` 컬렉션에 문서가 증가했는지 확인.
+
+위 단계가 모두 통과하면 Vercel 백엔드와 DB 서버 연동이 정상 동작하는 것이다.
+
+### 웹 API로 DB 호스팅 업로드
+
+서버 모드(`npm run start:server`) 실행 후, 설정된 persistence(Atlas/Redis)에 HTTP로 데이터를 올릴 수 있다.
+
+- **POST /api/snapshots** — body에 `TickSnapshot` JSON 전송 시 DB에 스냅샷 저장.
+- **POST /api/events** — body에 `WorldEventPayload` JSON 전송 시 DB에 이벤트 저장.
+
+요청 형식은 [DB_PLAN.md](DB_PLAN.md) §4 참고.
+
+### IDE AI 협업용 Atlas 초대 (선택)
+
+Cursor 등 IDE의 AI와 협업 편의를 위해 Atlas 프로젝트에 에이전트 이메일을 초대할 수 있다.
+
+- **초대 시**: Atlas 대시보드 → Project Settings → **Access Manager** (또는 Organization → Invite User)에서 해당 이메일 초대.
+- **역할 권장**: **Read Only** 또는 **Data Access Read Only** 등 최소 권한으로 부여해, 클러스터/연결 정보 조회만 가능하게 두는 것을 권장한다.
+- 앱의 DB 연결(연결 문자열)은 `.env`로만 하면 되며, 초대와 무관하다.

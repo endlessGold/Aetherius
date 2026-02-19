@@ -29,7 +29,7 @@ export class Node implements NodeInterface {
     });
 
     // 2. Propagate to children (optional, depending on event type?)
-    // For now, we let the World/EventLoop manage distribution, 
+    // For now, we let the World manage distribution,
     // or implementing specific propagation logic here.
     // In this simple version, we don't auto-propagate to children to avoid double handling if the loop iterates all nodes.
   }

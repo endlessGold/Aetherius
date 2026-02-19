@@ -5,6 +5,26 @@ export interface LLMService {
   generateDecision(prompt: string, schema: unknown): Promise<unknown>;
 }
 
+const MAX_RETRIES = 2;
+const INITIAL_BACKOFF_MS = 1000;
+
+function isRetryableError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  const s = msg.toLowerCase();
+  return (
+    s.includes('429') ||
+    s.includes('resource_exhausted') ||
+    s.includes('resource has been exhausted') ||
+    s.includes('503') ||
+    s.includes('500') ||
+    s.includes('unavailable')
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function safeJsonParse(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -46,16 +66,29 @@ export class GeminiLLMService implements LLMService {
   private async generate(prompt: string, systemInstruction?: string, temperature = 0.6): Promise<string> {
     if (!this.model) return 'The spirits are silent...';
 
-    try {
-      const fullPrompt = systemInstruction
-        ? `${systemInstruction}\n\n---\n\n${prompt}`
-        : prompt;
-      const result = await this.model.generateContent(fullPrompt);
-      return (result.response as { text(): string }).text().trim();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      return `Error invoking Gemini: ${msg}`;
+    const fullPrompt = systemInstruction
+      ? `${systemInstruction}\n\n---\n\n${prompt}`
+      : prompt;
+    let lastError: unknown;
+    let backoffMs = INITIAL_BACKOFF_MS;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await this.model.generateContent(fullPrompt);
+        return (result.response as { text(): string }).text().trim();
+      } catch (error) {
+        lastError = error;
+        if (attempt < MAX_RETRIES && isRetryableError(error)) {
+          await sleep(backoffMs);
+          backoffMs *= 2;
+          continue;
+        }
+        const msg = error instanceof Error ? error.message : String(error);
+        return `Error invoking Gemini: ${msg}`;
+      }
     }
+    const msg = lastError instanceof Error ? lastError.message : String(lastError);
+    return `Error invoking Gemini: ${msg}`;
   }
 
   async generateResponse(prompt: string, context?: string): Promise<string> {

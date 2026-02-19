@@ -1,5 +1,4 @@
 import { NodeInterface } from './interfaces.js';
-import { EventLoop } from './eventLoop.js';
 import { EventBus } from './events/eventBus.js'; // New Event System
 import { EventCategory, System } from './events/eventTypes.js';
 import { EnvironmentGrid } from './environment/environmentGrid.js';
@@ -26,7 +25,6 @@ import { loadWorldConfig, WorldConfig } from './config/worldConfig.js';
 export class World {
   id: string;
   nodes: Map<string, NodeInterface> = new Map();
-  eventLoop: EventLoop = new EventLoop(); // Legacy, to be migrated
   eventBus: EventBus = new EventBus(); // New Advanced Event System
   tickCount: number = 0;
   persistence: Persistence;
@@ -134,39 +132,38 @@ export class World {
     }
     this.isTicking = true;
     try {
-    this.tickCount += 1;
-    // 1. Process Legacy Event Loop (Global events)
-    this.eventLoop.tick();
+      this.tickCount += 1;
+      // AsyncRequest 등 명령은 EventBus 큐에서 processQueue() 시 처리됨 (EventLoop 레거시 대체)
 
-    const tickPayload = this.tickPayloadProvider();
-    this.eventBus.publish(new System.Tick(this.tickCount, 1, tickPayload.environment));
+      const tickPayload = this.tickPayloadProvider();
+      this.eventBus.publish(new System.Tick(this.tickCount, 1, tickPayload.environment));
 
-    // 2. Process New Event Bus Queue
-    await this.eventBus.processQueue();
+      // 2. Process New Event Bus Queue
+      await this.eventBus.processQueue();
 
-    // 3. Simulate High-Res Physics
-    this.natureSystem.simulate(this.tickCount);
+      // 3. Simulate High-Res Physics
+      this.natureSystem.simulate(this.tickCount);
 
-    // 4. Goal-generating GA tick
-    this.goalGASystem.tick(this);
+      // 4. Goal-generating GA tick
+      this.goalGASystem.tick(this);
 
-    // 5. AI God tick
-    await this.autoGodSystem.tick();
-    
-    // 6. Maze Evolution
-    this.mazeSystem.tick();
+      // 5. AI God tick
+      await this.autoGodSystem.tick();
 
-    await this.eventBus.processQueue();
+      // 6. Maze Evolution
+      this.mazeSystem.tick();
 
-    const predictions: Record<string, any> = {};
-    for (const node of this.nodes.values()) {
-      const pred = this.tfModel.predictForNode(node);
-      if (pred) predictions[node.id] = pred;
-    }
+      await this.eventBus.processQueue();
 
-    const timestamp = this.config.deterministic ? this.tickCount * this.config.tickDurationMs : Date.now();
-    const snapshot = this.buildSnapshot(timestamp, Object.keys(predictions).length > 0 ? predictions : undefined);
-    await this.persistence.saveTickSnapshot(snapshot);
+      const predictions: Record<string, any> = {};
+      for (const node of this.nodes.values()) {
+        const pred = this.tfModel.predictForNode(node);
+        if (pred) predictions[node.id] = pred;
+      }
+
+      const timestamp = this.config.deterministic ? this.tickCount * this.config.tickDurationMs : Date.now();
+      const snapshot = this.buildSnapshot(timestamp, Object.keys(predictions).length > 0 ? predictions : undefined);
+      await this.persistence.saveTickSnapshot(snapshot);
     } finally {
       this.isTicking = false;
     }

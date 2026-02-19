@@ -2,11 +2,14 @@ import { World } from '../core/world.js';
 import { createEntityByAssemblyWithManager } from '../entities/catalog.js';
 import { EnvLayer } from '../core/environment/environmentGrid.js';
 import { Environment, System } from '../core/events/eventTypes.js';
-import { WeatherData } from '../components/entityData.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { universeRegistry } from '../core/space/universeRegistry.js';
 import { ScienceOrchestrator } from '../ai/orchestrator.js';
+import { NarrativeOrchestrator } from '../ai/narrativeOrchestrator.js';
+import { LifeScienceAgent } from '../ai/agents/scientistAgents.js';
+import { createDefaultLLMService } from '../ai/llmService.js';
+import { translateToKorean } from '../ai/translate.js';
 
 export interface CommandResult {
   success: boolean;
@@ -14,25 +17,29 @@ export interface CommandResult {
   data?: unknown;
 }
 
+/** Commands science is allowed to recommend and execute (--execute / executeActions). */
+const SCIENCE_ACTION_WHITELIST = new Set([
+  'advance_tick', 'spawn_entity', 'change_environment', 'bless', 'flood', 'ice_age',
+  'inspect_pos', 'status', 'map', 'deploy_drone', 'drones', 'drone_mission',
+  'disease_stats', 'corpses', 'migration_stats', 'taxonomy', 'oracle', 'watch', 'explore_loc',
+  'create_place', 'modify_terrain'
+]);
+const MAX_SCIENCE_ACTIONS = 10;
+
 export class CommandHandler {
   private world: World;
   private weatherEntity: unknown;
   private scienceOrchestrator: ScienceOrchestrator;
+  private narrativeOrchestrator: NarrativeOrchestrator;
 
   constructor(world: World, weatherEntity: unknown) {
     this.world = world;
     this.weatherEntity = weatherEntity;
     this.scienceOrchestrator = new ScienceOrchestrator({
-      recordExperimentEvent: async (payload) => {
-        await this.world.persistence.saveWorldEvent({
-          worldId: this.world.id,
-          tick: this.world.tickCount,
-          type: 'OTHER',
-          location: { x: 0, y: 0 },
-          details: JSON.stringify(payload)
-        });
-      }
+      persistence: this.world.persistence,
+      getWorldContext: () => ({ worldId: this.world.id, tick: this.world.tickCount })
     });
+    this.narrativeOrchestrator = new NarrativeOrchestrator();
 
     this.world.eventBus.subscribe(System.ChangeWeather, (event) => {
       const weatherBehavior = (this.weatherEntity as { children?: Array<{ components?: { weather?: Record<string, unknown> } }> })?.children?.[0];
@@ -86,6 +93,8 @@ export class CommandHandler {
           return this.handleMeteor(args);
         case 'oracle':
           return this.handleOracle();
+        case 'narrative':
+          return await this.handleNarrative(args);
         case 'watch':
           return this.handleWatch(args);
         case 'map':
@@ -116,6 +125,14 @@ export class CommandHandler {
           return this.handleCorpses(args);
         case 'migration_stats':
           return this.handleMigrationStats(args);
+        case 'life_science_discover':
+          return await this.handleLifeScienceDiscover(args);
+        case 'life_science_observe':
+          return await this.handleLifeScienceObserve(args);
+        case 'create_place':
+          return this.handleCreatePlace(args);
+        case 'modify_terrain':
+          return this.handleModifyTerrain(args);
         case 'help':
           return this.handleHelp();
         default:
@@ -336,8 +353,19 @@ export class CommandHandler {
     const tick = this.world.tickCount;
     let advice = entityCount < 10 ? "The world is barren. Consider 'spawn_entity' or 'bless'."
       : entityCount > 200 ? "Life teems uncontrollably. A 'smite' might restore balance."
-      : "The world is in harmony. Watch and wait.";
+        : "The world is in harmony. Watch and wait.";
     return { success: true, message: `The Oracle speaks: "In the year ${tick}, ${entityCount} souls wander. ${advice}"` };
+  }
+
+  private async handleNarrative(args: string[]): Promise<CommandResult> {
+    const translateToKo = args.includes('--ko') || args.includes('--lang=ko') || process.env.AETHERIUS_OUTPUT_LANG === 'ko';
+    try {
+      const { combined } = await this.narrativeOrchestrator.getNarrative(this.world);
+      const message = translateToKo ? await translateToKorean(createDefaultLLMService(), combined) : combined;
+      return { success: true, message };
+    } catch (e: unknown) {
+      return { success: false, message: `Narrative failed: ${e instanceof Error ? e.message : String(e)}` };
+    }
   }
 
   private handleWatch(args: string[]): CommandResult {
@@ -420,12 +448,22 @@ export class CommandHandler {
   }
 
   private async handleAskScience(args: string[]): Promise<CommandResult> {
-    const query = args.join(' ');
-    if (!query) return { success: false, message: "Usage: ask_science <question>" };
+    const executeFlag = args.includes('--execute');
+    const translateToKo = args.includes('--ko') || args.includes('--lang=ko') || process.env.AETHERIUS_OUTPUT_LANG === 'ko';
+    const queryParts = args.filter((a) => a !== '--execute' && a !== '--ko' && a !== '--lang=ko');
+    const query = queryParts.join(' ');
+    if (!query) return { success: false, message: "Usage: ask_science <question> [--execute] [--ko]" };
     try {
-      const projectContext = this.buildScienceContext();
+      const projectContext = await this.buildScienceContext();
       const report = await this.scienceOrchestrator.processQuery(query, projectContext);
-      const markdown = this.renderScienceReportMarkdown(report);
+      let markdown = this.renderScienceReportMarkdown(report);
+      let executedActions: { cmd: string; success: boolean; message: string }[] | undefined;
+      if (executeFlag && report.recommendedActions && report.recommendedActions.length > 0) {
+        const { results } = await this.executeScienceActions(report.recommendedActions);
+        executedActions = results;
+        const executedBlock = results.map((r) => `- ${r.cmd}: ${r.success ? r.message : r.message}`).join('\n');
+        markdown += `\n\n# Executed Actions\n${executedBlock}\n`;
+      }
       await this.world.persistence.saveWorldEvent({
         worldId: this.world.id,
         tick: this.world.tickCount,
@@ -436,13 +474,44 @@ export class CommandHandler {
       if (this.world.config.telemetry.writeJsonlToDisk) {
         await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
       }
-      return { success: true, message: markdown };
+      const message = translateToKo ? await translateToKorean(createDefaultLLMService(), markdown) : markdown;
+      return {
+        success: true,
+        message,
+        data: { report, executedActions }
+      };
     } catch (e: unknown) {
       return { success: false, message: `Science failed: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 
-  private buildScienceContext(): string {
+  /** Execute science-recommended commands (whitelist only, up to MAX_SCIENCE_ACTIONS). */
+  async executeScienceActions(commands: string[]): Promise<{ results: { cmd: string; success: boolean; message: string }[] }> {
+    const toRun = commands.slice(0, MAX_SCIENCE_ACTIONS);
+    const results: { cmd: string; success: boolean; message: string }[] = [];
+    for (const raw of toRun) {
+      const cmd = raw.trim();
+      if (!cmd) continue;
+      const commandName = cmd.split(/\s+/)[0]?.toLowerCase();
+      if (!commandName || !SCIENCE_ACTION_WHITELIST.has(commandName)) {
+        results.push({ cmd, success: false, message: 'Command not in science whitelist.' });
+        continue;
+      }
+      const result = await this.execute(cmd);
+      results.push({ cmd, success: result.success, message: result.message });
+    }
+    return { results };
+  }
+
+  private async buildScienceContext(): Promise<string> {
+    const narrativeBlock = await (async () => {
+      try {
+        const { combined } = await this.narrativeOrchestrator.getNarrative(this.world);
+        return `World Narrative (reference for all scientists):\n${combined}`;
+      } catch {
+        return '';
+      }
+    })();
     const manager = this.getManager();
     const entities = manager.entities ?? [];
     const places = entities.filter((e: unknown) => (e as { type?: string })?.type === 'Place').length;
@@ -460,21 +529,52 @@ export class CommandHandler {
     const nodeCount = maze?.nodes?.size ?? 0;
     const edgeCount = maze ? Array.from(maze.nodes.values()).reduce((sum: number, n: unknown) => sum + ((n as { maze?: { connections?: { size: number } } })?.maze?.connections?.size ?? 0), 0) / 2 : 0;
     const env = this.world.environment;
-    return [
+    const divineActions = `
+Available divine actions (you may recommend these; one command per line in Recommended Actions):
+- advance_tick [count]: Let time flow
+- spawn_entity plant|ga [name]: Create life
+- change_environment temp|humidity|rain|wind|co2 <value>: Alter the sky
+- bless all|plants|creatures: Heal your creations
+- flood [level]: Raise water levels
+- ice_age: Freeze the world
+- inspect_pos <x> <y>: Gaze at the earth
+- status [entityId]: Know a soul
+- map [life]: View the world
+- deploy_drone [role] [worldId] documentary|survey|irrigate|cool|heat|seed_place: Send a scientist drone
+- drones [worldId]: List drones
+- drone_mission <droneId> <mode> [text]: Update drone mission
+- disease_stats [worldId]: Disease summary
+- corpses [worldId]: Corpse summary
+- migration_stats [worldId]: Place population summary
+- taxonomy <entityId>: Inspect classification
+- oracle: Seek wisdom about the world
+- watch <id>: Observe a soul
+- explore_loc list: Discover places formed by life
+- create_place <x> <y> [name]: Create a new place (Geologist only)
+- modify_terrain <x> <y> <radius> <layer> <value>: Modify terrain (Geologist only)`;
+    const assemblyTypes = 'Assembly types for spawn_entity: plant -> Plant_Species_001..020, ga -> Creature_Type_001..040. Use spawn_entity plant <name> or spawn_entity ga <name> to create new life.';
+    const baseContext = [
       `Project: Aetherius (life simulation + evolving maze places)`,
       `Tick: ${this.world.tickCount}`,
       `Population: entities=${entities.length} places=${places} plants=${plants} creatures=${creatures}`,
       `AvgStats: hp=${counted ? (totalHp / counted).toFixed(2) : 'n/a'} energy=${counted ? (totalEnergy / counted).toFixed(2) : 'n/a'}`,
       `Maze: nodes=${nodeCount} edges=${Math.floor(edgeCount)}`,
-      `Env(center): temp=${env.get(50, 50, EnvLayer.Temperature).toFixed(2)} moisture=${env.get(50, 50, EnvLayer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, EnvLayer.LightIntensity).toFixed(2)}`
+      `Env(center): temp=${env.get(50, 50, EnvLayer.Temperature).toFixed(2)} moisture=${env.get(50, 50, EnvLayer.SoilMoisture).toFixed(2)} light=${env.get(50, 50, EnvLayer.LightIntensity).toFixed(2)}`,
+      divineActions.trim(),
+      assemblyTypes
     ].join('\n');
+    return narrativeBlock ? `${narrativeBlock}\n\n---\n\n${baseContext}` : baseContext;
   }
 
-  private renderScienceReportMarkdown(report: { query?: string; projectContext?: string; hypotheses?: Array<{ agent: string; content: string }>; reviews?: Array<{ reviewer: string; target: string; critique: string }>; synthesis?: string }): string {
+  private renderScienceReportMarkdown(report: { query?: string; projectContext?: string; hypotheses?: Array<{ agent: string; content: string }>; reviews?: Array<{ reviewer: string; target: string; critique: string }>; rebuttals?: Array<{ agent: string; content: string }>; synthesis?: string; recommendedActions?: string[] }): string {
     const header = `\n📄 [Aetherius Science Report]\n- Tick: ${this.world.tickCount}\n- Query: ${report.query}\n\n`;
     const agents = (report.hypotheses ?? []).map((h) => `## ${h.agent}\n${h.content}\n`).join('\n');
     const reviews = (report.reviews ?? []).map((r) => `- ${r.reviewer} → ${r.target}\n${r.critique}\n`).join('\n');
-    return `${header}# Context\n${report.projectContext ?? ''}\n\n# Hypotheses\n${agents}\n# Peer Review\n${reviews}\n# Synthesis\n${report.synthesis ?? ''}\n`;
+    const rebuttals = (report.rebuttals ?? []).map((r) => `- ${r.agent}: ${r.content}\n`).join('\n');
+    const recommended = (report.recommendedActions ?? []).length > 0
+      ? `\n# Recommended Actions\n${(report.recommendedActions ?? []).map((c) => `- ${c}`).join('\n')}\n`
+      : '';
+    return `${header}# Context\n${report.projectContext ?? ''}\n\n# Hypotheses\n${agents}\n# Peer Review\n${reviews}\n# Rebuttals\n${rebuttals}\n# Synthesis\n${report.synthesis ?? ''}${recommended}\n`;
   }
 
   private async appendScienceReportToFile(entry: unknown): Promise<void> {
@@ -573,6 +673,63 @@ export class CommandHandler {
     return { success: true, message: JSON.stringify(snapshot, null, 2) };
   }
 
+  /** 생명 과학자: 특징이 뚜렷한 종 발견 시 네이밍 후 DB(species_named) 저장 */
+  private async handleLifeScienceDiscover(_args: string[]): Promise<CommandResult> {
+    const manager = this.getManager();
+    const entities = manager.entities ?? [];
+    const withTaxonomy: Array<{ id: string; taxonomy: unknown; classification?: unknown; position?: { x: number; y: number } }> = [];
+    for (const e of entities) {
+      const ent = e as { id: string; children?: Array<{ components?: Record<string, unknown> }> };
+      const c = ent.children?.[0]?.components;
+      if (c?.taxonomy) withTaxonomy.push({ id: ent.id, taxonomy: c.taxonomy, classification: c.classification, position: c.position as { x: number; y: number } | undefined });
+    }
+    if (withTaxonomy.length === 0) return { success: true, message: 'No entities with taxonomy to discover. Spawn or run a few ticks first.' };
+    const entitiesSummary = withTaxonomy.map((x) => `id=${x.id} taxonomy=${JSON.stringify(x.taxonomy)} classification=${JSON.stringify(x.classification)} position=${JSON.stringify(x.position)}`).join('\n');
+    const llm = createDefaultLLMService();
+    const lifeAgent = new LifeScienceAgent(llm);
+    const discoveries = await lifeAgent.suggestSpeciesNames(entitiesSummary);
+    const worldId = this.world.id;
+    const tick = this.world.tickCount;
+    for (const d of discoveries) {
+      const taxonomySnapshot = withTaxonomy.find((x) => x.id === d.entityId)?.taxonomy;
+      await this.world.persistence.saveWorldEvent({
+        worldId,
+        tick,
+        type: 'species_named',
+        location: { x: 0, y: 0 },
+        details: JSON.stringify({ entityId: d.entityId, suggestedName: d.suggestedName, taxonomySnapshot, reason: d.reason, tick })
+      });
+    }
+    if (discoveries.length === 0) return { success: true, message: 'Life scientist found no distinctly notable species to name this time.' };
+    return { success: true, message: `Named ${discoveries.length} species and saved to DB: ${discoveries.map((d) => d.suggestedName).join(', ')}` };
+  }
+
+  /** 생명 과학자: 현재 생명 다양성 관찰 요약을 DB(life_science_observation)에 저장 */
+  private async handleLifeScienceObserve(_args: string[]): Promise<CommandResult> {
+    const manager = this.getManager();
+    const entities = manager.entities ?? [];
+    const withTaxonomy: Array<{ id: string; taxonomy: unknown }> = [];
+    for (const e of entities) {
+      const ent = e as { id: string; children?: Array<{ components?: Record<string, unknown> }> };
+      const c = ent.children?.[0]?.components;
+      if (c?.taxonomy) withTaxonomy.push({ id: ent.id, taxonomy: c.taxonomy });
+    }
+    const entitiesSummary = withTaxonomy.length > 0
+      ? withTaxonomy.map((x) => `id=${x.id} taxonomy=${JSON.stringify(x.taxonomy)}`).join('\n')
+      : 'No entities with taxonomy.';
+    const llm = createDefaultLLMService();
+    const lifeAgent = new LifeScienceAgent(llm);
+    const summary = await lifeAgent.observeDiversity(entitiesSummary);
+    await this.world.persistence.saveWorldEvent({
+      worldId: this.world.id,
+      tick: this.world.tickCount,
+      type: 'life_science_observation',
+      location: { x: 0, y: 0 },
+      details: JSON.stringify({ tick: this.world.tickCount, summary, entityCount: withTaxonomy.length })
+    });
+    return { success: true, message: `Observation saved to DB.\n${summary}` };
+  }
+
   private handleDiseaseStats(args: string[]): CommandResult {
     const worldId = args[0] || this.world.id;
     const handle = universeRegistry.getWorld(worldId);
@@ -602,6 +759,79 @@ export class CommandHandler {
     return { success: true, message: `\n🧭 [MIGRATION @ ${worldId}]\n${JSON.stringify(stats, null, 2)}` };
   }
 
+  private handleCreatePlace(args: string[]): CommandResult {
+    const x = parseFloat(args[0]);
+    const y = parseFloat(args[1]);
+    const name = args.slice(2).join(' ') || `Place_${this.world.tickCount}`;
+
+    if (isNaN(x) || isNaN(y)) {
+      return { success: false, message: 'Usage: create_place <x> <y> [name]' };
+    }
+
+    const mazeSystem = (this.world as any).mazeSystem;
+    if (!mazeSystem) return { success: false, message: 'MazeSystem not active.' };
+
+    // Create the node via MazeNetwork
+    const node = mazeSystem.network.createNode(x, y, name);
+    return { success: true, message: `Created place '${name}' at (${x}, ${y}) with ID ${node.id}` };
+  }
+
+  private handleModifyTerrain(args: string[]): CommandResult {
+    const x = parseFloat(args[0]);
+    const y = parseFloat(args[1]);
+    const radius = parseFloat(args[2]);
+    const layerName = args[3]?.toLowerCase();
+    const value = parseFloat(args[4]);
+
+    if (isNaN(x) || isNaN(y) || isNaN(radius) || !layerName || isNaN(value)) {
+      return { success: false, message: 'Usage: modify_terrain <x> <y> <radius> <layer> <value>' };
+    }
+
+    let layer: EnvLayer | undefined;
+    switch (layerName) {
+      case 'temp': case 'temperature': layer = EnvLayer.Temperature; break;
+      case 'humidity': layer = EnvLayer.Humidity; break;
+      case 'moisture': case 'soil_moisture': layer = EnvLayer.SoilMoisture; break;
+      case 'elevation': case 'height': layer = EnvLayer.Elevation; break;
+      case 'nitrogen': layer = EnvLayer.SoilNitrogen; break;
+      case 'phosphorus': layer = EnvLayer.SoilPhosphorus; break;
+      case 'potassium': layer = EnvLayer.SoilPotassium; break;
+      case 'light': layer = EnvLayer.LightIntensity; break;
+      case 'co2': layer = EnvLayer.CO2Concentration; break;
+      case 'pollution': layer = EnvLayer.Pollution; break;
+      case 'compaction': layer = EnvLayer.Compaction; break;
+      case 'ph': layer = EnvLayer.PHLevel; break;
+      case 'salinity': layer = EnvLayer.SoilSalinity; break;
+      case 'organic': layer = EnvLayer.OrganicMatter; break;
+      case 'groundwater': layer = EnvLayer.GroundWaterLevel; break;
+      case 'uv': layer = EnvLayer.UVRadiation; break;
+    }
+
+    if (layer === undefined) {
+      return { success: false, message: `Unknown layer: ${layerName}` };
+    }
+
+    const env = this.world.environment;
+    let count = 0;
+    // Iterate over the bounding box of the circle
+    const minX = Math.max(0, Math.floor(x - radius));
+    const maxX = Math.min(env.width - 1, Math.ceil(x + radius));
+    const minY = Math.max(0, Math.floor(y - radius));
+    const maxY = Math.min(env.height - 1, Math.ceil(y + radius));
+
+    for (let i = minX; i <= maxX; i++) {
+      for (let j = minY; j <= maxY; j++) {
+        const dist = Math.sqrt((i - x) ** 2 + (j - y) ** 2);
+        if (dist <= radius) {
+          env.set(i, j, layer, value);
+          count++;
+        }
+      }
+    }
+
+    return { success: true, message: `Modified ${layerName} to ${value} in ${count} cells around (${x}, ${y})` };
+  }
+
   private handleHelp(): CommandResult {
     return {
       success: true,
@@ -618,7 +848,7 @@ export class CommandHandler {
   - watch <id>: Observe a soul
   - map [life]: View the world
   - explore_loc [list]: Discover places formed by life
-  - ask_science <query>: Consult the council of scientists
+  - ask_science <query> [--execute]: Consult the council of scientists; --execute runs recommended actions
   - ai_events <on|off>: Let AI handle events
   - space: View worlds and wormholes
   - warp <entityId> <worldId>: Move an entity between worlds
@@ -626,6 +856,8 @@ export class CommandHandler {
   - drones [worldId]: List drones
   - drone_mission <droneId> <mode> [text]: Update drone mission
   - taxonomy <entityId>: Inspect classification/taxonomy/disease
+  - life_science_discover: Life scientist names distinct species and saves to DB
+  - life_science_observe: Life scientist observes biodiversity and saves observation to DB
   - disease_stats [worldId]: Disease summary
   - corpses [worldId]: Corpse summary
   - migration_stats [worldId]: Place population summary

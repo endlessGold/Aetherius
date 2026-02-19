@@ -19,6 +19,10 @@ export class CommandHandler {
             Object.assign(weather, event.payload || {});
         });
     }
+    /** World 참조 (서버/테스트에서 세션·라우터 연결용). */
+    getWorld() {
+        return this.world;
+    }
     getManager() {
         return this.world.getAssembleManager();
     }
@@ -42,6 +46,8 @@ export class CommandHandler {
                     return this.handleStatus(args);
                 case 'latest_snapshot':
                     return await this.handleLatestSnapshot();
+                case 'db_status':
+                    return await this.handleDbStatus();
                 case 'inspect_pos':
                     return this.handleInspectPos(args);
                 case 'smite':
@@ -249,6 +255,31 @@ export class CommandHandler {
         if (!snap)
             return { success: false, message: 'No snapshot saved yet.' };
         return { success: true, message: `Latest snapshot (driver=${this.world.persistence.driver})`, data: snap };
+    }
+    async handleDbStatus() {
+        const driver = this.world.persistence.driver;
+        const worldId = this.world.id;
+        const snap = await this.world.persistence.getLatestSnapshot(worldId);
+        const envSource = process.env.AETHERIUS_NOSQL_DRIVER != null
+            ? `env (AETHERIUS_NOSQL_DRIVER=${process.env.AETHERIUS_NOSQL_DRIVER})`
+            : 'default (inmemory)';
+        const summary = {
+            driver,
+            configSource: envSource,
+            currentWorldId: worldId,
+            latestSnapshot: snap
+                ? {
+                    tick: snap.tick,
+                    timestamp: snap.timestamp,
+                    nodesCount: snap.nodes?.length ?? 0,
+                    entitiesCount: Array.isArray(snap.entities) ? snap.entities.length : 0
+                }
+                : null
+        };
+        const msg = snap
+            ? `DB: ${driver} | world=${worldId} | latest tick=${snap.tick} | nodes=${snap.nodes?.length ?? 0} entities=${Array.isArray(snap.entities) ? snap.entities.length : 0}`
+            : `DB: ${driver} | world=${worldId} | no snapshot yet`;
+        return { success: true, message: msg, data: summary };
     }
     handleSmite(args) {
         const x = parseFloat(args[0]);
@@ -519,7 +550,9 @@ export class CommandHandler {
                 location: { x: 0, y: 0 },
                 details
             });
-            await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
+            if (this.world.config.telemetry.writeJsonlToDisk) {
+                await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
+            }
             return { success: true, message: markdown };
         }
         catch (e) {
@@ -764,6 +797,8 @@ export class CommandHandler {
   - change_environment <param> <value>: Alter the sky
   - inspect_pos <x> <y>: Gaze at the earth
   - status [id]: Know a soul
+  - latest_snapshot: Load latest saved snapshot (current world)
+  - db_status: Show persistence driver and current DB state
   - help`
         };
     }

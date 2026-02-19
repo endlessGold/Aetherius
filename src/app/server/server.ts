@@ -55,6 +55,8 @@ export class Server {
       console.log(`   - POST /api/command { "cmd": "..." }`);
       console.log(`   - GET /api/science?q=질문  또는  POST /api/science { "query": "질문" }`);
       console.log(`   - GET /api/status`);
+      console.log(`   - POST /api/snapshots (TickSnapshot JSON → DB 호스팅 업로드)`);
+      console.log(`   - POST /api/events (WorldEventPayload JSON → DB 호스팅 업로드)`);
     });
   }
 }

@@ -13,7 +13,7 @@ export class AsyncCommandHandler {
     }
 
     registerHandlers() {
-        this.world.eventLoop.register(System.AsyncRequest, async (event: any) => {
+        this.world.eventBus.subscribe(System.AsyncRequest, async (event: any) => {
             const req = event as AsyncRequestEvent;
             const { action, params, resolve, reject } = req.payload;
 
