@@ -23,8 +23,9 @@ export {
   WITNESS_FEE_RATIO_DEFAULT,
 } from './engine.js';
 
-export type { EconomyGenome, EconomyActionKind } from './genome.js';
+export type { EconomyGenome } from './genome.js';
 export {
+  EconomyActionKind,
   createEconomyGenome,
   fitness,
   mutate,
@@ -42,8 +43,22 @@ export {
   createPopulation,
   nextGeneration,
 } from './evolution.js';
-export type { SpeciesRole, PlantActionKind } from './concepts.js';
-export { getSpeciesRole, PLANT_ACTIONS, DEFAULT_ACTIONS } from './concepts.js';
+export type {
+  SpeciesRoleId,
+  PlantSpeciesRole,
+  AnimalSpeciesRole,
+  PrimaryProducerRole,
+  PlantActionKind,
+} from './concepts.js';
+export {
+  SpeciesRole,
+  getSpeciesRole,
+  getSpeciesRoleId,
+  PRIMARY_PRODUCER_ROLES,
+  ANIMAL_SPECIES_ROLES,
+  PLANT_ACTIONS,
+  DEFAULT_ACTIONS,
+} from './concepts.js';
 export type { BioEntity } from './types.js';
 export { EcologicalEngine } from './ecologicalEngine.js';
 export type { EnvironmentState } from './environment.js';

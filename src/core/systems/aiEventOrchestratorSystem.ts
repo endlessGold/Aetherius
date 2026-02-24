@@ -2,7 +2,7 @@ import type { World } from '../world.js';
 import { BaseSystem } from './baseSystem.js';
 import { EventCategory, Environment, System, Command, Biological, Interaction, Simulation } from '../events/eventTypes.js';
 import { EnvironmentLayer } from '../environment/environmentGrid.js';
-import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
+import { ControlService, createControlService } from '../../ai/llmService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -24,7 +24,7 @@ type AIAction =
 
 export class AIEventOrchestratorSystem extends BaseSystem {
   private world: World;
-  private llm: LLMService;
+  private control: ControlService;
   private enabled: boolean = false;
   private eventBuffer: BufferedEvent[] = [];
   private lastDecisionTick: number = 0;
@@ -34,7 +34,7 @@ export class AIEventOrchestratorSystem extends BaseSystem {
   constructor(world: World) {
     super('AIEventOrchestratorSystem', world.eventBus);
     this.world = world;
-    this.llm = createDefaultLLMService();
+    this.control = createControlService();
   }
 
   toggle(enabled: boolean) {
@@ -74,7 +74,7 @@ export class AIEventOrchestratorSystem extends BaseSystem {
     const events = this.eventBuffer.splice(0, this.eventBuffer.length);
 
     const prompt = this.buildPrompt(context, events);
-    const decision = (await this.llm.generateDecision(prompt, null)) as { actions?: AIAction[] } | null | undefined;
+    const decision = (await this.control.generateDecision(prompt, null)) as { actions?: AIAction[] } | null | undefined;
     const actions: AIAction[] = Array.isArray(decision?.actions) ? decision.actions : [];
 
     if (actions.length === 0) return;

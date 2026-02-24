@@ -427,15 +427,21 @@ export class EvolutionSystem {
       const avgF = stats.fitness / stats.count;
 
       const bar = (val: number) => '█'.repeat(Math.round(val * 20)).padEnd(20, '░');
+      const isKorean = (process.env.AETHERIUS_OUTPUT_LANG ?? '').toLowerCase() === 'ko';
+      const title = isKorean ? '🧬 EVOLUTION REPORT (진화 리포트)' : '🧬 EVOLUTION REPORT';
+      const surviveLabel = isKorean ? 'Survive (생존)' : 'Survive';
+      const growLabel = isKorean ? 'Grow (성장)' : 'Grow';
+      const exploreLabel = isKorean ? 'Explore (탐험)' : 'Explore';
+      const fitnessLabel = isKorean ? 'Avg Fitness (평균 적합도)' : 'Avg Fitness';
 
       console.log(`\n╔══════════════════════════════════════════════════════════════════╗`);
-      console.log(`║ 🧬 EVOLUTION REPORT | Generation ${gen.padEnd(5)} | Tick ${world.tickCount.toString().padEnd(8)} ║`);
+      console.log(`║ ${title} | Generation ${gen.padEnd(5)} | Tick ${world.tickCount.toString().padEnd(8)} ║`);
       console.log(`╠══════════════════════════════════════════════════════════════════╣`);
-      console.log(`║ Survive : ${bar(avgS)} ${(avgS * 100).toFixed(1)}%`.padEnd(66) + '║');
-      console.log(`║ Grow    : ${bar(avgG)} ${(avgG * 100).toFixed(1)}%`.padEnd(66) + '║');
-      console.log(`║ Explore : ${bar(avgE)} ${(avgE * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`║ ${surviveLabel} : ${bar(avgS)} ${(avgS * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`║ ${growLabel} : ${bar(avgG)} ${(avgG * 100).toFixed(1)}%`.padEnd(66) + '║');
+      console.log(`║ ${exploreLabel} : ${bar(avgE)} ${(avgE * 100).toFixed(1)}%`.padEnd(66) + '║');
       console.log(`╟──────────────────────────────────────────────────────────────────╢`);
-      console.log(`║ Avg Fitness: ${avgF.toFixed(4).padEnd(52)} ║`);
+      console.log(`║ ${fitnessLabel}: ${avgF.toFixed(4).padEnd(52)} ║`);
       console.log(`╚══════════════════════════════════════════════════════════════════╝`);
 
       world.persistence.saveEvolutionStats({

@@ -205,9 +205,8 @@ export namespace Economy {
       super(EventCategory.Economy, payload, sourceId, priority);
     }
   }
-  /** 행동 수행 시 (economy 스텝 연동). */
-  export class ActionApplied extends Event<{ entityId: string; actionKind: string; tickCount: number }> {
-    constructor(entityId: string, actionKind: string, tickCount: number, sourceId?: string) {
+  export class ActionApplied extends Event<{ entityId: string; actionKind: number; tickCount: number }> {
+    constructor(entityId: string, actionKind: number, tickCount: number, sourceId?: string) {
       super({ entityId, actionKind, tickCount }, sourceId, 1);
     }
   }

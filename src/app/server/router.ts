@@ -12,6 +12,8 @@ import { handlePostDatasetBackup } from './routes/postDatasetBackup.js';
 import { handleGetDatasetExport } from './routes/getDatasetExport.js';
 import { handlePostSnapshots } from './routes/postSnapshots.js';
 import { handlePostEvents } from './routes/postEvents.js';
+import { handleGetSpecies, handlePostSpecies } from './routes/speciesRoutes.js';
+import { handleGetScenarios, handlePostScenario } from './routes/scenarios.js';
 
 function wantsJson5(req: Request): boolean {
     const format = (req.query.format as string | undefined)?.toLowerCase();
@@ -47,6 +49,11 @@ export const createRouter = (session: WorldSession): express.Router => {
     router.post('/model/linear', handlePostLinearModel(session));
     router.post('/dataset/backup', handlePostDatasetBackup());
     router.get('/dataset/export', handleGetDatasetExport(session));
+    router.get('/species', handleGetSpecies());
+    router.post('/species', handlePostSpecies());
+    
+    router.get('/scenarios', handleGetScenarios());
+    router.post('/scenarios/:id/start', handlePostScenario(session));
 
     return router;
 };

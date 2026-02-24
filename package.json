@@ -9,6 +9,7 @@
     "start": "npm run build && node dist/main.js",
     "start:server": "npm run build && node dist/main.js --mode=server",
     "start:cli": "npm run build && node dist/main.js --mode=cli",
+    "start:exec": "npm run build && node dist/main.js --mode=exec",
     "dev": "tsx src/main.ts",
     "dev:tsnode": "node --loader ts-node/esm src/main.ts",
     "start:dist": "node dist/main.js",

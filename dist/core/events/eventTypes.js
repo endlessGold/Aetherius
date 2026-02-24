@@ -209,7 +209,6 @@ export var Economy;
         }
     }
     Economy.Event = Event;
-    /** 행동 수행 시 (economy 스텝 연동). */
     class ActionApplied extends Event {
         constructor(entityId, actionKind, tickCount, sourceId) {
             super({ entityId, actionKind, tickCount }, sourceId, 1);

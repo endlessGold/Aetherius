@@ -43,8 +43,19 @@ export class EnvironmentGrid {
   constructor(width: number = 7000, height: number = 7000) {
     this.width = width;
     this.height = height;
-    console.log(`[EnvironmentGrid] Initialized virtual grid: ${width}x${height}`);
-    console.log(`[EnvironmentGrid] Total potential parameters: ${(width * height * this.layers).toLocaleString()} (Target: >1 Billion)`);
+    const isKorean = (process.env.AETHERIUS_OUTPUT_LANG ?? '').toLowerCase() === 'ko';
+    const baseInit = `[EnvironmentGrid] Initialized virtual grid: ${width}x${height}`;
+    const baseTotal = `[EnvironmentGrid] Total potential parameters: ${(width * height * this.layers).toLocaleString()} (Target: >1 Billion)`;
+    console.log(
+      isKorean
+        ? `${baseInit} (가상 환경 그리드를 ${width}x${height} 크기로 초기화했습니다)`
+        : baseInit
+    );
+    console.log(
+      isKorean
+        ? `${baseTotal} (총 잠재 파라미터 수: 10억 개 이상 목표)`
+        : baseTotal
+    );
   }
 
   // Chunk Key 생성

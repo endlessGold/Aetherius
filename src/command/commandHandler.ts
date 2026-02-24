@@ -8,8 +8,12 @@ import { universeRegistry } from '../core/space/universeRegistry.js';
 import { ScienceOrchestrator } from '../ai/orchestrator.js';
 import { NarrativeOrchestrator } from '../ai/narrativeOrchestrator.js';
 import { LifeScienceAgent } from '../ai/agents/scientistAgents.js';
-import { createDefaultLLMService } from '../ai/llmService.js';
+import { createControlService } from '../ai/llmService.js';
 import { translateToKorean } from '../ai/translate.js';
+import { SpeciesLibrary } from '../gamedata/species.js';
+import { BioEntityGenerator } from '../ai/generators/bioEntityGenerator.js';
+import { BiologicalEntity } from '../core/bio/types.js';
+import { CreatureEntity, CreatureBehavior } from '../entities/behaviors.js';
 
 export interface CommandResult {
   success: boolean;
@@ -133,6 +137,14 @@ export class CommandHandler {
           return this.handleCreatePlace(args);
         case 'modify_terrain':
           return this.handleModifyTerrain(args);
+        case 'species':
+          return this.handleSpecies(args);
+        case 'design_species':
+          return await this.handleDesignSpecies(args);
+        case 'spawn_species':
+          return this.handleSpawnSpecies(args);
+        case 'save_species':
+          return await this.handleSaveSpecies(args);
         case 'help':
           return this.handleHelp();
         default:
@@ -141,6 +153,157 @@ export class CommandHandler {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       return { success: false, message: `Divine intervention failed: ${msg}` };
+    }
+  }
+
+  private handleSpecies(args: string[]): CommandResult {
+    const sub = args[0]?.toLowerCase();
+
+    if (!sub || sub === 'list') {
+      const list = SpeciesLibrary.map(s =>
+        `- ${s.entity_id}: ${s.biomass_picograms}pg, ${s.locomotion.primary_method}`
+      ).join('\n');
+      return {
+        success: true,
+        message: `Registered Biological Models:\n${list}\n\nUse 'species view <id>' to see full parameters.`
+      };
+    }
+
+    if (sub === 'view') {
+      const id = args[1]?.toUpperCase();
+      const species = SpeciesLibrary.find(s => s.entity_id === id);
+      if (!species) {
+        return { success: false, message: `Species model '${id}' not found.` };
+      }
+
+      // Serialize to formatted string
+      const json = JSON.stringify(species, (key, value) => {
+        if (value === undefined) return "undefined";
+        return value;
+      }, 2);
+
+      return { success: true, message: `Model Data for ${species.entity_id}:\n${json}` };
+    }
+
+    return { success: false, message: "Usage: species list | species view <id>" };
+  }
+
+  private async handleDesignSpecies(args: string[]): Promise<CommandResult> {
+    const langArg = args.find((a) => a.startsWith('--lang='))?.split('=')[1];
+    const detailArg = args.find((a) => a.startsWith('--detail='))?.split('=')[1];
+    const policyArg = args.find((a) => a.startsWith('--policy='))?.split('=')[1];
+    const filtered = args.filter((a) => !a.startsWith('--lang=') && !a.startsWith('--detail=') && !a.startsWith('--policy='));
+    const description = filtered.join(' ');
+    if (!description) {
+      return { success: false, message: "Usage: design_species <description> [--lang=ko|en] [--detail=low|medium|high] [--policy=auto|ask|strict]" };
+    }
+
+    const control = createControlService();
+    const generator = new BioEntityGenerator(control);
+
+    // Simple check if description is Korean
+    const isKorean = langArg ? langArg.toLowerCase() === 'ko' : /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(description);
+    const detail =
+      detailArg?.toLowerCase() === 'low' ? 'LOW' :
+        detailArg?.toLowerCase() === 'high' ? 'HIGH' : 'MEDIUM';
+    const policy =
+      policyArg?.toLowerCase() === 'ask' ? 'ASK' :
+        policyArg?.toLowerCase() === 'strict' ? 'STRICT_MANUAL' : 'AUTO_FILL';
+
+    const result = await generator.generate({
+      description,
+      language: isKorean ? 'ko' : 'en',
+      detailLevel: detail as 'LOW' | 'MEDIUM' | 'HIGH',
+      policy: policy as 'ASK' | 'AUTO_FILL' | 'STRICT_MANUAL'
+    });
+
+    if (result.status === 'ERROR') {
+      return { success: false, message: `Generation Error: ${result.message}` };
+    }
+
+    if (result.status === 'MISSING_FIELDS') {
+      return {
+        success: false,
+        message: `Incomplete Design: ${result.message}\nDraft:\n${JSON.stringify(result.draft, null, 2)}`
+      };
+    }
+
+    if (result.model) {
+      // Save to library (In-memory for now)
+      // Check if ID exists
+      const existingIdx = SpeciesLibrary.findIndex(s => s.entity_id === result.model!.entity_id);
+      if (existingIdx >= 0) {
+        SpeciesLibrary[existingIdx] = result.model;
+      } else {
+        SpeciesLibrary.push(result.model);
+      }
+
+      const isKoOut = (process.env.AETHERIUS_OUTPUT_LANG ?? '').toLowerCase() === 'ko';
+      const msgBase = `✨ Designed new species: ${result.model.entity_id}\nVisual: ${result.model.visuals?.description ?? 'N/A'}\nUse 'species view ${result.model.entity_id}' to see full DNA.`;
+      const msgKo = `✨ 새 종을 설계했습니다: ${result.model.entity_id}\n시각 설명: ${result.model.visuals?.description ?? '없음'}\n전체 파라미터는 'species view ${result.model.entity_id}'로 확인하세요.`;
+      return { success: true, message: isKoOut ? `${msgBase} (${msgKo})` : msgBase };
+    }
+
+    return { success: false, message: "Unknown state." };
+  }
+
+  private mapBioToCreatureData(model: BiologicalEntity): import('../components/entityData.js').CreatureData {
+    const world = this.world;
+    const x = 50 + (world.random01() - 0.5) * 10;
+    const y = 50 + (world.random01() - 0.5) * 10;
+    const baseEnergy = Math.max(10, Math.min(100, (model.metabolic_engine.atp_generation_rate ?? 10) * 5));
+    return {
+      position: { x, y },
+      vitality: { hp: 100 },
+      energy: { energy: baseEnergy },
+      age: { age: 0 },
+      classification: {
+        category: 'Biotic',
+        subtype: 'Creature',
+        material: { organicFraction: 0.9, inorganicFraction: 0.05, waterFraction: 0.05 }
+      },
+      lifeStage: { level: 'Microbe', complexity: 0.2, trophicRole: 'Consumer' }
+    };
+  }
+
+  private handleSpawnSpecies(args: string[]): CommandResult {
+    const id = args[0]?.toUpperCase();
+    const name = args[1] || this.world.nextId('SpeciesEntity');
+    if (!id) return { success: false, message: "Usage: spawn_species <speciesId> [name]" };
+    const model = SpeciesLibrary.find(s => s.entity_id === id);
+    if (!model) return { success: false, message: `Species not found: ${id}. Use 'species list' to see available IDs.` };
+    const cdata = this.mapBioToCreatureData(model);
+    const entity = this.getManager().createEntity(
+      CreatureEntity,
+      name,
+      [],
+      [{ NodeClass: CreatureBehavior, components: cdata }]
+    );
+    return { success: true, message: `Spawned species '${id}' as entity '${entity.id}'.`, data: { id: entity.id } };
+  }
+
+  private async handleSaveSpecies(args: string[]): Promise<CommandResult> {
+    const id = args[0]?.toUpperCase();
+    if (!id) return { success: false, message: "Usage: save_species <speciesId>" };
+    const model = SpeciesLibrary.find(s => s.entity_id === id);
+    if (!model) return { success: false, message: `Species not found: ${id}. Use 'species list' to see available IDs.` };
+    try {
+      const root = process.cwd();
+      const dir = path.join(root, 'datasets');
+      await fs.mkdir(dir, { recursive: true });
+      const file = path.join(dir, 'species_models.jsonl');
+      const line = JSON.stringify({
+        rowType: 'species_model',
+        worldId: this.world.id,
+        tick: this.world.tickCount,
+        ts: new Date().toISOString(),
+        model
+      });
+      await fs.appendFile(file, `${line}\n`, 'utf8');
+      return { success: true, message: `Saved species '${id}' to datasets/species_models.jsonl` };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { success: false, message: `Save failed: ${msg}` };
     }
   }
 
@@ -154,7 +317,13 @@ export class CommandHandler {
 
   private async handleWarpEvolution(args: string[]): Promise<CommandResult> {
     const ticks = parseInt(args[0], 10) || 1000;
-    console.log(`⏳ Warping time by ${ticks} ticks... (Simulating Evolution)`);
+    const isKorean = (process.env.AETHERIUS_OUTPUT_LANG ?? '').toLowerCase() === 'ko';
+    const baseLog = `⏳ Warping time by ${ticks} ticks... (Simulating Evolution)`;
+    console.log(
+      isKorean
+        ? `${baseLog} (시간을 ${ticks}틱 앞당겨 진화를 시뮬레이션합니다)`
+        : baseLog
+    );
     const startTime = Date.now();
     const updateInterval = Math.max(1, Math.floor(ticks / 20));
     for (let i = 0; i < ticks; i++) {
@@ -173,7 +342,9 @@ export class CommandHandler {
     const duration = Date.now() - startTime;
     return {
       success: true,
-      message: `⚡ Warped ${ticks} ticks in ${duration}ms. World is now at tick ${this.world.tickCount}. Check logs for evolutionary changes.`
+      message: isKorean
+        ? `⚡ Warped ${ticks} ticks in ${duration}ms. World is now at tick ${this.world.tickCount}. Check logs for evolutionary changes. (총 ${ticks}틱을 ${duration}ms 동안 진행했습니다. 현재 세계 tick=${this.world.tickCount}. 진화 변화를 보려면 로그를 확인하세요.)`
+        : `⚡ Warped ${ticks} ticks in ${duration}ms. World is now at tick ${this.world.tickCount}. Check logs for evolutionary changes.`
     };
   }
 
@@ -379,7 +550,7 @@ export class CommandHandler {
     const translateToKo = args.includes('--ko') || args.includes('--lang=ko') || process.env.AETHERIUS_OUTPUT_LANG === 'ko';
     try {
       const { combined } = await this.narrativeOrchestrator.getNarrative(this.world);
-      const message = translateToKo ? await translateToKorean(createDefaultLLMService(), combined) : combined;
+      const message = translateToKo ? await translateToKorean(createControlService(), combined) : combined;
       return { success: true, message };
     } catch (e: unknown) {
       return { success: false, message: `Narrative failed: ${e instanceof Error ? e.message : String(e)}` };
@@ -467,13 +638,24 @@ export class CommandHandler {
 
   private async handleAskScience(args: string[]): Promise<CommandResult> {
     const executeFlag = args.includes('--execute');
+    const useLite = args.includes('--lite');
     const translateToKo = args.includes('--ko') || args.includes('--lang=ko') || process.env.AETHERIUS_OUTPUT_LANG === 'ko';
-    const queryParts = args.filter((a) => a !== '--execute' && a !== '--ko' && a !== '--lang=ko');
+    const queryParts = args.filter((a) => a !== '--execute' && a !== '--ko' && a !== '--lang=ko' && a !== '--lite');
     const query = queryParts.join(' ');
-    if (!query) return { success: false, message: "Usage: ask_science <question> [--execute] [--ko]" };
+    if (!query) return { success: false, message: "Usage: ask_science <question> [--execute] [--ko] [--lite]" };
     try {
       const projectContext = await this.buildScienceContext();
-      const report = await this.scienceOrchestrator.processQuery(query, projectContext);
+      const orchestrator = useLite
+        ? new ScienceOrchestrator({
+          persistence: this.world.persistence,
+          getWorldContext: () => ({ worldId: this.world.id, tick: this.world.tickCount }),
+          mode: 'lite',
+          maxAgents: 3,
+          enablePeerReview: false,
+          enableRebuttal: false
+        })
+        : this.scienceOrchestrator;
+      const report = await orchestrator.processQuery(query, projectContext);
       let markdown = this.renderScienceReportMarkdown(report);
       let executedActions: { cmd: string; success: boolean; message: string }[] | undefined;
       if (executeFlag && report.recommendedActions && report.recommendedActions.length > 0) {
@@ -492,7 +674,7 @@ export class CommandHandler {
       if (this.world.config.telemetry.writeJsonlToDisk) {
         await this.appendScienceReportToFile({ worldId: this.world.id, tick: this.world.tickCount, query, report });
       }
-      const message = translateToKo ? await translateToKorean(createDefaultLLMService(), markdown) : markdown;
+      const message = translateToKo ? await translateToKorean(createControlService(), markdown) : markdown;
       return {
         success: true,
         message,
@@ -584,8 +766,8 @@ Available divine actions (you may recommend these; one command per line in Recom
     return narrativeBlock ? `${narrativeBlock}\n\n---\n\n${baseContext}` : baseContext;
   }
 
-  private renderScienceReportMarkdown(report: { query?: string; projectContext?: string; hypotheses?: Array<{ agent: string; content: string }>; reviews?: Array<{ reviewer: string; target: string; critique: string }>; rebuttals?: Array<{ agent: string; content: string }>; synthesis?: string; recommendedActions?: string[] }): string {
-    const header = `\n📄 [Aetherius Science Report]\n- Tick: ${this.world.tickCount}\n- Query: ${report.query}\n\n`;
+  private renderScienceReportMarkdown(report: { query?: string; projectContext?: string; modelName?: string; hypotheses?: Array<{ agent: string; content: string }>; reviews?: Array<{ reviewer: string; target: string; critique: string }>; rebuttals?: Array<{ agent: string; content: string }>; synthesis?: string; recommendedActions?: string[] }): string {
+    const header = `\n📄 [Aetherius Science Report]\n- Tick: ${this.world.tickCount}\n- Model: ${report.modelName || 'Unknown'}\n- Query: ${report.query}\n\n`;
     const agents = (report.hypotheses ?? []).map((h) => `## ${h.agent}\n${h.content}\n`).join('\n');
     const reviews = (report.reviews ?? []).map((r) => `- ${r.reviewer} → ${r.target}\n${r.critique}\n`).join('\n');
     const rebuttals = (report.rebuttals ?? []).map((r) => `- ${r.agent}: ${r.content}\n`).join('\n');
@@ -703,7 +885,7 @@ Available divine actions (you may recommend these; one command per line in Recom
     }
     if (withTaxonomy.length === 0) return { success: true, message: 'No entities with taxonomy to discover. Spawn or run a few ticks first.' };
     const entitiesSummary = withTaxonomy.map((x) => `id=${x.id} taxonomy=${JSON.stringify(x.taxonomy)} classification=${JSON.stringify(x.classification)} position=${JSON.stringify(x.position)}`).join('\n');
-    const llm = createDefaultLLMService();
+    const llm = createControlService();
     const lifeAgent = new LifeScienceAgent(llm);
     const discoveries = await lifeAgent.suggestSpeciesNames(entitiesSummary);
     const worldId = this.world.id;
@@ -735,7 +917,7 @@ Available divine actions (you may recommend these; one command per line in Recom
     const entitiesSummary = withTaxonomy.length > 0
       ? withTaxonomy.map((x) => `id=${x.id} taxonomy=${JSON.stringify(x.taxonomy)}`).join('\n')
       : 'No entities with taxonomy.';
-    const llm = createDefaultLLMService();
+    const llm = createControlService();
     const lifeAgent = new LifeScienceAgent(llm);
     const summary = await lifeAgent.observeDiversity(entitiesSummary);
     await this.world.persistence.saveWorldEvent({
@@ -880,12 +1062,15 @@ Available divine actions (you may recommend these; one command per line in Recom
   - corpses [worldId]: Corpse summary
   - migration_stats [worldId]: Place population summary
   - spawn_entity <plant|ga> [name]: Create life
+  - spawn_species <speciesId> [name]: Create life from designed biological model
+  - save_species <speciesId>: Persist a species model to datasets/species_models.jsonl
   - change_environment <param> <value>: Alter the sky
   - inspect_pos <x> <y>: Gaze at the earth
   - status [id]: Know a soul
   - latest_snapshot: Load latest saved snapshot (current world)
   - db_status: Show persistence driver and current DB state
-  - help`
+  - species list | species view <id>: List or inspect biological models
+  - design_species <description> [--lang=ko|en] [--detail=low|medium|high] [--policy=auto|ask|strict]: Generate a species from natural language`
     };
   }
 }

@@ -6,7 +6,7 @@
 import { AetheriusEngine } from './engine.js';
 import { createEconomant, type NutrientPool } from './types.js';
 import { nextPolyId } from './idGen.js';
-import { createEconomyGenome, fitness, mutate, crossover } from './genome.js';
+import { createEconomyGenome, fitness, mutate, crossover, EconomyActionKind } from './genome.js';
 import type { EconomyGenome } from './genome.js';
 import type { EconomyAgent, EconomyAction } from './agent.js';
 import { selectAction } from './agent.js';
@@ -44,7 +44,7 @@ export function refillNutrientPool(pool: NutrientPool): void {
 
 /** 1틱당 1라운드 실행 시 발생한 행동/파산 정보 (EventBus 발행용). */
 export interface RunOneStepResult {
-  actions: Array<{ entityId: string; actionKind: string }>;
+  actions: Array<{ entityId: string; actionKind: EconomyActionKind }>;
   defaults: Array<{ entityId: string; rehabCount: number }>;
 }
 
@@ -58,7 +58,7 @@ export function runOneStep(
   rng: PRNG,
   nutrientPool: NutrientPool,
   callbacks?: {
-    onAction?(entityId: string, actionKind: string): void;
+    onAction?(entityId: string, actionKind: EconomyActionKind): void;
     onDefault?(entityId: string, rehabCount: number): void;
   }
 ): RunOneStepResult {
@@ -76,39 +76,39 @@ export function runOneStep(
     const e = agent.economant;
 
     switch (action.kind) {
-        case 'PHOTOSYNTHESIS': {
+        case EconomyActionKind.PHOTOSYNTHESIS: {
           const next = engine.photosynthesis(e);
           agent.economant = next;
           break;
         }
-        case 'PROCESS_NUTRIENT': {
+        case EconomyActionKind.PROCESS_NUTRIENT: {
           const next = engine.processNutrient(e, action.polyIndex);
           agent.economant = next;
           break;
         }
-        case 'COMPETE_NUTRIENT': {
+        case EconomyActionKind.COMPETE_NUTRIENT: {
           const res = engine.takeNutrientFromPool(e, nutrientPool, 0.2);
           agent.economant = res.subject;
           nutrientPool.p = res.pool.p;
           break;
         }
-        case 'MINE': {
+        case EconomyActionKind.MINE: {
           const next = engine.mine(e);
           agent.economant = next;
           break;
         }
-        case 'CRAFT': {
+        case EconomyActionKind.CRAFT: {
           const area = agent.genome.craftArea;
           const next = engine.craft(e, area, 0.5);
           agent.economant = next;
           break;
         }
-        case 'CONSUME': {
+        case EconomyActionKind.CONSUME: {
           const next = engine.consume(e, action.polyIndex);
           agent.economant = next;
           break;
         }
-        case 'TRADE_BUY': {
+        case EconomyActionKind.TRADE_BUY: {
           const sellerAgent = get(action.sellerId);
           if (!sellerAgent) break;
           const res = engine.transferPoly(
@@ -124,7 +124,7 @@ export function runOneStep(
           }
           break;
         }
-        case 'TRADE_SELL': {
+        case EconomyActionKind.TRADE_SELL: {
           const buyerAgent = get(action.buyerId);
           if (!buyerAgent) break;
           const res = engine.transferPoly(
@@ -140,7 +140,7 @@ export function runOneStep(
           }
           break;
         }
-        case 'WITNESS': {
+        case EconomyActionKind.WITNESS: {
           const buyerAgent = get(action.buyerId);
           const sellerAgent = get(action.sellerId);
           if (!buyerAgent || !sellerAgent || sellerAgent.economant.p.length === 0) break;
@@ -159,11 +159,11 @@ export function runOneStep(
           }
           break;
         }
-        case 'IDLE':
+        case EconomyActionKind.IDLE:
           break;
       }
 
-    if (action.kind !== 'IDLE') {
+    if (action.kind !== EconomyActionKind.IDLE) {
       result.actions.push({ entityId: agent.id, actionKind: action.kind });
       callbacks?.onAction?.(agent.id, action.kind);
     }

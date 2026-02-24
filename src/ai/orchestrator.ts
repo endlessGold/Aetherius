@@ -1,10 +1,11 @@
-import { LLMService, createDefaultLLMService } from './llmService.js';
+import { ControlService, createControlService } from './llmService.js';
 import { ScientistAgent, NetworkScienceAgent, EcologyAgent, EvolutionAgent, ClimateHydrologyAgent, LifeScienceAgent, GeologistAgent, AgentResponse } from './agents/scientistAgents.js';
 import type { Persistence } from '../data/persistence.js';
 
 export interface ScienceReport {
     query: string;
     projectContext: string;
+    modelName?: string;
     hypotheses: AgentResponse[];
     reviews: { reviewer: string; target: string; critique: string }[];
     rebuttals: { agent: string; content: string }[];
@@ -32,14 +33,14 @@ export interface ScienceOrchestratorOptions {
 
 export class ScienceOrchestrator {
     private agents: ScientistAgent[];
-    private llm: LLMService;
+    private control: ControlService;
     private recordExperimentEvent?: (payload: ExperimentEventPayload) => Promise<void>;
     private mode: 'full' | 'lite';
     private enablePeerReview: boolean;
     private enableRebuttal: boolean;
 
     constructor(options?: ScienceOrchestratorOptions) {
-        this.llm = createDefaultLLMService();
+        this.control = createControlService();
         this.recordExperimentEvent = options?.recordExperimentEvent;
         if (!this.recordExperimentEvent && options?.persistence && options?.getWorldContext) {
             const persistence = options.persistence;
@@ -61,26 +62,28 @@ export class ScienceOrchestrator {
         this.enablePeerReview = options?.enablePeerReview ?? (mode === 'full');
         this.enableRebuttal = options?.enableRebuttal ?? (mode === 'full');
         const baseAgents: ScientistAgent[] = [
-            new NetworkScienceAgent(this.llm),
-            new EcologyAgent(this.llm),
-            new EvolutionAgent(this.llm),
-            new ClimateHydrologyAgent(this.llm),
-            new LifeScienceAgent(this.llm),
-            new GeologistAgent(this.llm)
+            new NetworkScienceAgent(this.control),
+            new EcologyAgent(this.control),
+            new EvolutionAgent(this.control),
+            new ClimateHydrologyAgent(this.control),
+            new LifeScienceAgent(this.control),
+            new GeologistAgent(this.control)
         ];
         const maxAgents = options?.maxAgents && options.maxAgents > 0 ? options.maxAgents : baseAgents.length;
         this.agents = baseAgents.slice(0, maxAgents);
     }
 
     async processQuery(query: string, projectContext: string): Promise<ScienceReport> {
-        console.log(`\n🧪 [Science] Orchestrating query: "${query}"`);
+        const modelName = this.control.getModelName();
+        console.log(`\n🧪 [Science] Orchestrating query: "${query}" (Model: ${modelName})`);
 
         const hypotheses: AgentResponse[] = [];
         console.log(`\n--- Phase 1: Individual Analysis ---`);
         const phase1Concurrency = 2;
-        for (let i = 0; i < this.agents.length; i += phase1Concurrency) {
-            const batch = this.agents.slice(i, i + phase1Concurrency);
-            await Promise.all(batch.map(async (agent) => {
+        const tasks: Promise<void>[] = [];
+
+        for (const agent of this.agents) {
+            const task = (async () => {
                 console.log(`... ${agent.name} (${agent.domain}) is thinking...`);
                 const content = await agent.analyze(query, projectContext);
                 hypotheses.push({ agent: agent.domain, content });
@@ -92,8 +95,14 @@ export class ScienceOrchestrator {
                     content
                 });
                 console.log(`✅ ${agent.name}: Hypothesis generated.`);
-            }));
+            })();
+            tasks.push(task);
+            if (tasks.length >= phase1Concurrency) {
+                await Promise.all(tasks);
+                tasks.length = 0;
+            }
         }
+        if (tasks.length > 0) await Promise.all(tasks);
 
         console.log(`\n--- Phase 2: Peer Review ---`);
         const reviews: { reviewer: string; target: string; critique: string }[] = [];
@@ -139,7 +148,7 @@ export class ScienceOrchestrator {
         const synthesis = await this.synthesize(query, projectContext, hypotheses, reviews, rebuttals);
         const recommendedActions = parseRecommendedActions(synthesis);
         await this.recordExperimentEvent?.({ kind: 'science_synthesis', query, synthesis, recommendedActions });
-        return { query, projectContext, hypotheses, reviews, rebuttals, synthesis, recommendedActions };
+        return { query, projectContext, modelName, hypotheses, reviews, rebuttals, synthesis, recommendedActions };
     }
 
     private async synthesize(
@@ -186,7 +195,7 @@ ${rebuttals.map(r => `- ${r.agent}: ${r.content}`).join('\n')}
         - [bullets]
         `;
 
-        return await this.llm.generateResponse(`${context}\n\n${prompt}`, "You are a scientific orchestrator for a simulation codebase.");
+        return await this.control.generateResponse(`${context}\n\n${prompt}`, "You are a scientific orchestrator for a simulation codebase.");
     }
 }
 

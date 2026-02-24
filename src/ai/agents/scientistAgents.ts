@@ -1,4 +1,4 @@
-import { LLMService } from '../llmService.js';
+import { ControlService } from '../llmService.js';
 
 export interface AgentResponse {
     agent: string;
@@ -6,14 +6,14 @@ export interface AgentResponse {
 }
 
 export abstract class ScientistAgent {
-    protected llm: LLMService;
+    protected control: ControlService;
     public name: string;
     public domain: string;
 
-    constructor(name: string, domain: string, llm: LLMService) {
+    constructor(name: string, domain: string, control: ControlService) {
         this.name = name;
         this.domain = domain;
-        this.llm = llm;
+        this.control = control;
     }
 
     protected abstract getSystemPrompt(): string;
@@ -34,7 +34,7 @@ export abstract class ScientistAgent {
         - Proposed changes (bullets)
         - What to log next tick (bullets)
         `;
-        return await this.llm.generateResponse(prompt, this.getSystemPrompt());
+        return await this.control.generateResponse(prompt, this.getSystemPrompt());
     }
 
     async review(peerResponse: AgentResponse, query: string, projectContext?: string): Promise<string> {
@@ -50,7 +50,7 @@ export abstract class ScientistAgent {
         Critique it from your perspective, focusing on correctness and implementability.
         Output 3-5 bullet points.
         `;
-        return await this.llm.generateResponse(prompt, this.getSystemPrompt());
+        return await this.control.generateResponse(prompt, this.getSystemPrompt());
     }
 
     /** 검토들에 대한 반론/수정 의견 (Phase 2.5 협업 상호작용) */
@@ -75,13 +75,13 @@ export abstract class ScientistAgent {
 
         In 2-4 bullet points: respond to the reviews. Accept valid points and suggest a brief revision or clarification; push back only where you disagree. Keep it short and implementation-oriented.
         `;
-        return await this.llm.generateResponse(prompt, this.getSystemPrompt());
+        return await this.control.generateResponse(prompt, this.getSystemPrompt());
     }
 }
 
 export class NetworkScienceAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Watts', 'Network Science', llm);
+    constructor(control: ControlService) {
+        super('Dr. Watts', 'Network Science', control);
     }
 
     protected getSystemPrompt(): string {
@@ -90,8 +90,8 @@ export class NetworkScienceAgent extends ScientistAgent {
 }
 
 export class EcologyAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Odum', 'Ecology', llm);
+    constructor(control: ControlService) {
+        super('Dr. Odum', 'Ecology', control);
     }
 
     protected getSystemPrompt(): string {
@@ -100,8 +100,8 @@ export class EcologyAgent extends ScientistAgent {
 }
 
 export class EvolutionAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Fisher', 'Evolution', llm);
+    constructor(control: ControlService) {
+        super('Dr. Fisher', 'Evolution', control);
     }
 
     protected getSystemPrompt(): string {
@@ -110,8 +110,8 @@ export class EvolutionAgent extends ScientistAgent {
 }
 
 export class ClimateHydrologyAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Lorenz', 'Climate & Hydrology', llm);
+    constructor(control: ControlService) {
+        super('Dr. Lorenz', 'Climate & Hydrology', control);
     }
 
     protected getSystemPrompt(): string {
@@ -120,8 +120,8 @@ export class ClimateHydrologyAgent extends ScientistAgent {
 }
 
 export class GeologistAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Lyell', 'Geology', llm);
+    constructor(control: ControlService) {
+        super('Dr. Lyell', 'Geology', control);
     }
 
     protected getSystemPrompt(): string {
@@ -131,8 +131,8 @@ export class GeologistAgent extends ScientistAgent {
 
 /** 생명 과학자: 종 다양성 연구, 뚜렷한 종 발견 시 네이밍, 지속 관찰, 필요 시 새 진화종 설계·개입 */
 export class LifeScienceAgent extends ScientistAgent {
-    constructor(llm: LLMService) {
-        super('Dr. Linnaeus', 'Life Science', llm);
+    constructor(control: ControlService) {
+        super('Dr. Linnaeus', 'Life Science', control);
     }
 
     protected getSystemPrompt(): string {
@@ -151,7 +151,7 @@ ${entitiesSummary}
 Output format: one line per discovery, exactly: entityId | suggestedName | reason
 If nothing is notably distinct, output only: none
 `;
-        const raw = await this.llm.generateResponse(prompt, this.getSystemPrompt());
+        const raw = await this.control.generateResponse(prompt, this.getSystemPrompt());
         const lines = raw.split('\n').map((l) => l.trim()).filter((l) => l.length > 0 && l.toLowerCase() !== 'none');
         const out: { entityId: string; suggestedName: string; reason: string }[] = [];
         for (const line of lines) {
@@ -169,6 +169,6 @@ You are a life scientist conducting a biodiversity observation. Summarize the cu
 Entities summary:
 ${entitiesSummary}
 `;
-        return await this.llm.generateResponse(prompt, this.getSystemPrompt());
+        return await this.control.generateResponse(prompt, this.getSystemPrompt());
     }
 }

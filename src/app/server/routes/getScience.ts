@@ -30,11 +30,22 @@ export const handleGetScience = (session: WorldSession) => async (req: Request, 
         return;
     }
     const executeActions = Boolean(req.body?.executeActions);
-    const translateToKo = (req.query.lang as string)?.toLowerCase() === 'ko' || (req.body?.lang as string)?.toLowerCase() === 'ko' || process.env.AETHERIUS_OUTPUT_LANG === 'ko';
-    const cmdStr = [q.trim(), executeActions ? '--execute' : '', translateToKo ? '--ko' : ''].filter(Boolean).join(' ');
+    const translateToKo =
+        (req.query.lang as string)?.toLowerCase() === 'ko' ||
+        (req.body?.lang as string)?.toLowerCase() === 'ko' ||
+        process.env.AETHERIUS_OUTPUT_LANG === 'ko';
+    const cmdStr = ['ask_science', '--lite', q.trim(), executeActions ? '--execute' : '', translateToKo ? '--ko' : '']
+        .filter(Boolean)
+        .join(' ');
 
     try {
-        const result = await session.enqueueRequest('command', { cmdStr });
+        const timeoutMs = Number(process.env.AETHERIUS_SCIENCE_TIMEOUT_MS || '60000');
+        const result = timeoutMs > 0
+            ? await Promise.race([
+                session.enqueueRequest('command', { cmdStr }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Science request timed out')), timeoutMs))
+            ])
+            : await session.enqueueRequest('command', { cmdStr });
         if (wantsJson5(req)) {
             res.setHeader('Content-Type', 'application/json5; charset=utf-8');
             res.send(JSON5.stringify(result));

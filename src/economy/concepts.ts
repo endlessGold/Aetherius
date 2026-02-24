@@ -1,10 +1,26 @@
-/**
- * 종별 행동 컨셉: 같은 V/E/P 메커니즘을 생태에 맞게 해석.
- * 식물·나무는 거래하지 않음. 광합성·가공·영양분 경쟁으로 은유.
- */
+import { EconomyActionKind } from './genome.js';
 
-/** 종 역할: 행동 세트와 의미가 다름. */
-export type SpeciesRole = 'plant' | 'default';
+export enum SpeciesRole {
+  plant,
+  marketAgent,
+  grazer,
+  predator,
+  decomposer,
+}
+
+export const PRIMARY_PRODUCER_ROLES = [SpeciesRole.plant] as const;
+export const ANIMAL_SPECIES_ROLES = [
+  SpeciesRole.marketAgent,
+  SpeciesRole.grazer,
+  SpeciesRole.predator,
+  SpeciesRole.decomposer,
+] as const;
+
+export type PrimaryProducerRole = (typeof PRIMARY_PRODUCER_ROLES)[number];
+export type PlantSpeciesRole = PrimaryProducerRole;
+export type AnimalSpeciesRole = (typeof ANIMAL_SPECIES_ROLES)[number];
+
+export type SpeciesRoleId = SpeciesRole;
 
 /**
  * 식물(·나무) — 거래 없음
@@ -13,34 +29,87 @@ export type SpeciesRole = 'plant' | 'default';
  * - 영양분 빼앗기: Vertic -1, 에지스를 쓰고(낸다) 주변 영양분 풀에서 Poly 1개 획득. (거래로 은유 가능.)
  */
 export const PLANT_ACTIONS = {
-  /** 광합성: V-1, 영양분 Poly 1개 생성. */
-  PHOTOSYNTHESIS: 'PHOTOSYNTHESIS',
-  /** 가공: V-1, 영양분 → 영향(고품질 Poly). */
-  PROCESS_NUTRIENT: 'PROCESS_NUTRIENT',
-  /** 영양분 빼앗기: V-1, E 소모, 주변 풀에서 Poly 획득. */
-  COMPETE_NUTRIENT: 'COMPETE_NUTRIENT',
-  /** 섭취: Poly 소모로 V 회복. */
-  CONSUME: 'CONSUME',
-  IDLE: 'IDLE',
+  PHOTOSYNTHESIS: EconomyActionKind.PHOTOSYNTHESIS,
+  PROCESS_NUTRIENT: EconomyActionKind.PROCESS_NUTRIENT,
+  COMPETE_NUTRIENT: EconomyActionKind.COMPETE_NUTRIENT,
+  CONSUME: EconomyActionKind.CONSUME,
+  IDLE: EconomyActionKind.IDLE,
 } as const;
 
-export type PlantActionKind = keyof typeof PLANT_ACTIONS;
+export type PlantActionKind = (typeof PLANT_ACTIONS)[keyof typeof PLANT_ACTIONS];
 
 /**
  * 기본(동물·에이전트) — 시장 거래
  * - 채굴, 가공, 거래(매수/매도/보증), 섭취.
  */
 export const DEFAULT_ACTIONS = {
-  MINE: 'MINE',
-  CRAFT: 'CRAFT',
-  CONSUME: 'CONSUME',
-  TRADE_BUY: 'TRADE_BUY',
-  TRADE_SELL: 'TRADE_SELL',
-  WITNESS: 'WITNESS',
-  IDLE: 'IDLE',
+  MINE: EconomyActionKind.MINE,
+  CRAFT: EconomyActionKind.CRAFT,
+  CONSUME: EconomyActionKind.CONSUME,
+  TRADE_BUY: EconomyActionKind.TRADE_BUY,
+  TRADE_SELL: EconomyActionKind.TRADE_SELL,
+  WITNESS: EconomyActionKind.WITNESS,
+  IDLE: EconomyActionKind.IDLE,
 } as const;
 
-/** speciesId → 역할. */
+export const GRAZER_ACTIONS = {
+  GRAZE: EconomyActionKind.CONSUME,
+  MIGRATE: EconomyActionKind.IDLE,
+  FLEE: EconomyActionKind.IDLE,
+  CONSUME: EconomyActionKind.CONSUME,
+  IDLE: EconomyActionKind.IDLE,
+} as const;
+
+export type GrazerActionKind = (typeof GRAZER_ACTIONS)[keyof typeof GRAZER_ACTIONS];
+
+export const PREDATOR_ACTIONS = {
+  HUNT: EconomyActionKind.CONSUME,
+  STALK: EconomyActionKind.IDLE,
+  AMBUSH: EconomyActionKind.IDLE,
+  CONSUME: EconomyActionKind.CONSUME,
+  IDLE: EconomyActionKind.IDLE,
+} as const;
+
+export type PredatorActionKind = (typeof PREDATOR_ACTIONS)[keyof typeof PREDATOR_ACTIONS];
+
+export const DECOMPOSER_ACTIONS = {
+  SCAVENGE: EconomyActionKind.CONSUME,
+  BREAKDOWN: EconomyActionKind.IDLE,
+  ABSORB: EconomyActionKind.CONSUME,
+  IDLE: EconomyActionKind.IDLE,
+} as const;
+
+export type DecomposerActionKind = (typeof DECOMPOSER_ACTIONS)[keyof typeof DECOMPOSER_ACTIONS];
+
 export function getSpeciesRole(speciesId: string): SpeciesRole {
-  return speciesId === 'plant' ? 'plant' : 'default';
+  return speciesId === 'plant' ? SpeciesRole.plant : SpeciesRole.marketAgent;
+}
+
+export function getSpeciesRoleId(speciesId: string): SpeciesRoleId {
+  return getSpeciesRole(speciesId);
+}
+
+export namespace SpeciesRoleMeta {
+  export type Id = SpeciesRoleId;
+  export type Code = keyof typeof SpeciesRole;
+
+  export function toId(role: SpeciesRole): Id {
+    return role;
+  }
+
+  export function fromId(id: Id): SpeciesRole {
+    return id;
+  }
+
+  export function toCode(role: SpeciesRole): Code {
+    return SpeciesRole[role] as Code;
+  }
+
+  export function fromSpeciesId(speciesId: string): SpeciesRole {
+    return getSpeciesRole(speciesId);
+  }
+
+  export function idFromSpeciesId(speciesId: string): Id {
+    return getSpeciesRole(speciesId);
+  }
 }

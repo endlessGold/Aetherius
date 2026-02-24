@@ -5,7 +5,7 @@
 
 import type { World } from '../core/world.js';
 import { EnvironmentLayer } from '../core/environment/environmentGrid.js';
-import { createDefaultLLMService } from './llmService.js';
+import { ControlService, createControlService } from './llmService.js';
 import { HistorianAgent, ChroniclerAgent, StorytellerAgent } from './agents/narrativeAgents.js';
 
 export interface NarrativeResult {
@@ -55,12 +55,13 @@ export class NarrativeOrchestrator {
   private historian: HistorianAgent;
   private chronicler: ChroniclerAgent;
   private storyteller: StorytellerAgent;
+  private control: ControlService;
 
   constructor() {
-    const llm = createDefaultLLMService();
-    this.historian = new HistorianAgent(llm);
-    this.chronicler = new ChroniclerAgent(llm);
-    this.storyteller = new StorytellerAgent(llm);
+    this.control = createControlService();
+    this.historian = new HistorianAgent(this.control);
+    this.chronicler = new ChroniclerAgent(this.control);
+    this.storyteller = new StorytellerAgent(this.control);
   }
 
   /**

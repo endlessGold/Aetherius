@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import JSON5 from 'json5';
 import { WorldSession } from '../worldSession.js';
 import { NarrativeOrchestrator } from '../../../ai/narrativeOrchestrator.js';
-import { createDefaultLLMService } from '../../../ai/llmService.js';
+import { createControlService } from '../../../ai/llmService.js';
 import { translateToKorean } from '../../../ai/translate.js';
 
 function wantsJson5(req: Request): boolean {
@@ -21,7 +21,7 @@ export const handleGetNarrative = (session: WorldSession) => async (req: Request
     const orchestrator = new NarrativeOrchestrator();
     const result = await orchestrator.getNarrative(session.world);
     if (translateToKo) {
-      const llm = createDefaultLLMService();
+      const llm = createControlService();
       const [past, present, future, combined] = await Promise.all([
         translateToKorean(llm, result.past),
         translateToKorean(llm, result.present),

@@ -76,7 +76,11 @@ export class NatureSystem {
         }
     }
     initializeWorld(rng, recipeId = 'forest') {
-        console.log("[NatureSystem] Initializing starting zone (1024x1024)...");
+        const isKorean = (process.env.AETHERIUS_OUTPUT_LANG ?? '').toLowerCase() === 'ko';
+        const baseMsg = "[NatureSystem] Initializing starting zone (1024x1024)...";
+        console.log(isKorean
+            ? `${baseMsg} (시작 영역 1024x1024를 초기화하는 중입니다)`
+            : baseMsg);
         const startSize = 1024;
         const rand = () => (rng ? rng.nextFloat01() : Math.random());
         const recipe = getEnvironmentRecipe(recipeId);
@@ -101,7 +105,10 @@ export class NatureSystem {
                 this.grid.set(x, y, EnvironmentLayer.SoilSalinity, baseSalinity);
             }
         }
-        console.log("Environment initialized with high-resolution parameters.");
+        const doneMsg = "Environment initialized with high-resolution parameters.";
+        console.log(isKorean
+            ? `${doneMsg} (고해상도 환경 파라미터로 초기화되었습니다)`
+            : doneMsg);
     }
     applyRecipeAt(x, y, recipeId, radius) {
         const recipe = getEnvironmentRecipe(recipeId);

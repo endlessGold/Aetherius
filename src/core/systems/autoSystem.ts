@@ -1,18 +1,18 @@
 import type { World } from '../world.js';
-import { LLMService, createDefaultLLMService } from '../../ai/llmService.js';
+import { ControlService, createControlService } from '../../ai/llmService.js';
 import { EnvironmentLayer } from '../environment/environmentGrid.js';
 import { Environment } from '../events/eventTypes.js';
 
 export class AutoSystem {
   private world: World;
-  private llm: LLMService;
+  private control: ControlService;
   private isEnabled: boolean = false;
   private lastActionTick: number = 0;
   private actionInterval: number = 100; // Decisions every 100 ticks
 
   constructor(world: World) {
     this.world = world;
-    this.llm = createDefaultLLMService();
+    this.control = createControlService();
   }
 
   toggle(enabled: boolean) {
@@ -59,7 +59,7 @@ export class AutoSystem {
 
     // Call LLM
     console.log(`🤖 [AUTO SYSTEM] Contemplating...`);
-    const decision = await this.llm.generateDecision(prompt, null);
+    const decision = await this.control.generateDecision(prompt, null);
 
     if (decision) {
       await this.executeDecision(decision);

@@ -5,18 +5,18 @@
 
 import type { Economant, Poly } from './types.js';
 
-/** 행동 종류. 동물=거래, 식물=광합성·가공·영양분 경쟁. */
-export type EconomyActionKind =
-  | 'MINE'
-  | 'CRAFT'
-  | 'CONSUME'
-  | 'TRADE_BUY'
-  | 'TRADE_SELL'
-  | 'WITNESS'
-  | 'IDLE'
-  | 'PHOTOSYNTHESIS'
-  | 'PROCESS_NUTRIENT'
-  | 'COMPETE_NUTRIENT';
+export enum EconomyActionKind {
+  MINE,
+  CRAFT,
+  CONSUME,
+  TRADE_BUY,
+  TRADE_SELL,
+  WITNESS,
+  IDLE,
+  PHOTOSYNTHESIS,
+  PROCESS_NUTRIENT,
+  COMPETE_NUTRIENT,
+}
 
 /** Economy 유전체: 행동 가중치 + 가공 시 area 파라미터. */
 export interface EconomyGenome {
@@ -30,30 +30,30 @@ export interface EconomyGenome {
   generation: number;
 }
 
-const DEFAULT_WEIGHTS: Record<string, number> = {
-  MINE: 0.8,
-  CRAFT: 1.2,
-  CONSUME: 1,
-  TRADE_BUY: 0.6,
-  TRADE_SELL: 0.6,
-  WITNESS: 0.4,
-  IDLE: 0.1,
-  PHOTOSYNTHESIS: 0,
-  PROCESS_NUTRIENT: 0,
-  COMPETE_NUTRIENT: 0,
+const DEFAULT_WEIGHTS: Record<number, number> = {
+  [EconomyActionKind.MINE]: 0.8,
+  [EconomyActionKind.CRAFT]: 1.2,
+  [EconomyActionKind.CONSUME]: 1,
+  [EconomyActionKind.TRADE_BUY]: 0.6,
+  [EconomyActionKind.TRADE_SELL]: 0.6,
+  [EconomyActionKind.WITNESS]: 0.4,
+  [EconomyActionKind.IDLE]: 0.1,
+  [EconomyActionKind.PHOTOSYNTHESIS]: 0,
+  [EconomyActionKind.PROCESS_NUTRIENT]: 0,
+  [EconomyActionKind.COMPETE_NUTRIENT]: 0,
 };
 
-const PLANT_WEIGHTS: Record<string, number> = {
-  PHOTOSYNTHESIS: 1.2,
-  PROCESS_NUTRIENT: 1,
-  COMPETE_NUTRIENT: 0.8,
-  CONSUME: 1,
-  IDLE: 0.1,
-  MINE: 0,
-  CRAFT: 0,
-  TRADE_BUY: 0,
-  TRADE_SELL: 0,
-  WITNESS: 0,
+const PLANT_WEIGHTS: Record<number, number> = {
+  [EconomyActionKind.PHOTOSYNTHESIS]: 1.2,
+  [EconomyActionKind.PROCESS_NUTRIENT]: 1,
+  [EconomyActionKind.COMPETE_NUTRIENT]: 0.8,
+  [EconomyActionKind.CONSUME]: 1,
+  [EconomyActionKind.IDLE]: 0.1,
+  [EconomyActionKind.MINE]: 0,
+  [EconomyActionKind.CRAFT]: 0,
+  [EconomyActionKind.TRADE_BUY]: 0,
+  [EconomyActionKind.TRADE_SELL]: 0,
+  [EconomyActionKind.WITNESS]: 0,
 };
 
 export function createEconomyGenome(

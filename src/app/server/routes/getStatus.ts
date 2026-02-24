@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import JSON5 from 'json5';
 import { WorldSession } from '../worldSession.js';
+import { createControlService } from '../../../ai/llmService.js';
 
 function wantsJson5(req: Request): boolean {
     const format = (req.query.format as string | undefined)?.toLowerCase();
@@ -16,12 +17,20 @@ export const handleGetStatus = (session: WorldSession) => async (req: Request, r
 
     try {
         const result = await session.enqueueRequest('status', { id });
+        const control = createControlService();
+        const controlStatus = { enabled: control.isEnabled(), model: control.getModelName() };
+        
+        const finalResult = { ...result, control: controlStatus };
+        if (result.data) {
+            (finalResult.data as any).control = controlStatus;
+        }
+
         if (wantsJson5(req)) {
             res.setHeader('Content-Type', 'application/json5; charset=utf-8');
-            res.send(JSON5.stringify(result));
+            res.send(JSON5.stringify(finalResult));
             return;
         }
-        res.json(result);
+        res.json(finalResult);
     } catch (error: any) {
         const body = { success: false, message: error.message };
         if (wantsJson5(req)) {
