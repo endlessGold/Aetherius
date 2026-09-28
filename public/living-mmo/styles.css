@@ -42,3 +42,72 @@ main{width:min(1480px,calc(100% - 28px));margin:0 auto}
 .inspector{position:fixed;right:16px;top:86px;bottom:16px;width:min(370px,calc(100% - 32px));z-index:50;overflow:auto;padding:24px;background:rgba(7,18,29,.97);border:1px solid color-mix(in srgb,var(--c) 35%,#263d50);border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,.55);backdrop-filter:blur(18px)}.inspector>span{font-size:8px;letter-spacing:.14em;color:var(--c)}.inspector h2{font-size:27px;margin:7px 0 4px}.inspector>p{color:#72889a;font-size:10px}.inspector-close{position:absolute;right:15px;top:12px;border:0;background:none;font-size:22px;color:#6d8294;cursor:pointer}.inspector-law{margin:20px 0;padding:13px;border-left:2px solid var(--c);background:rgba(255,255,255,.025)}.inspector-law b,.inspector h3{font-size:8px;letter-spacing:.12em;color:#718a9e}.inspector-law p,.inspector li{font-size:10px;line-height:1.65;color:#9babb8}.inspector section{padding:13px 0;border-bottom:1px solid var(--line)}.inspector h3{margin:0 0 8px}.inspector ul{margin:0;padding-left:16px}
 @media(max-width:980px){.book-topbar{grid-template-columns:1fr auto}.chapter-progress{display:none}.chapter-rail{overflow:auto;grid-template-columns:repeat(5,minmax(150px,1fr))}.chapter-hero{grid-template-columns:1fr;gap:24px;padding-top:40px}.reading-map{max-width:700px}.stage-tabs{overflow:auto;grid-template-columns:repeat(5,minmax(130px,1fr))}.graph-stage-new,.play-layout,.ingame-layout{grid-template-columns:1fr}.graph-copy,.control-deck,.game-explain{border-right:0;border-left:0;border-bottom:1px solid var(--line)}.focus-canvas{min-height:520px}.graph-bottom{grid-column:1}.experience-body{min-height:0}.spec-strip{grid-template-columns:1fr}.game-window{margin:14px}.game-feed{grid-template-columns:1fr}.result-grid{grid-template-columns:1fr}}
 @media(max-width:640px){main{width:min(100% - 16px,1480px)}.book-topbar{padding:0 10px}.brand-lockup small{display:none}.chapter-count{font-size:9px}.chapter-hero{padding:30px 4px}.reading-map ol{grid-template-columns:repeat(2,1fr)}.read-stage,.control-deck,.state-deck,.result-stage{padding:22px}.cause-cards{grid-template-columns:1fr}.cause-cards article{min-height:130px}.stat-grid{grid-template-columns:1fr 1fr}.focus-canvas{min-height:560px;overflow:hidden}.focus-node{width:124px;padding:8px;min-height:68px}.focus-node small{display:none}.graph-bottom{align-items:flex-start;flex-direction:column}.graph-bottom button{margin-left:0}.chapter-nav>span{display:none}.chapter-nav{justify-content:space-between}.result-actions{flex-wrap:wrap}}
+
+
+/* Readability pass: keep only true metadata tiny; promote actual design content. */
+:root{font-size:16px}
+.brand-lockup b{font-size:17px}
+.brand-lockup small{font-size:10px}
+.chapter-count{font-size:13px}
+.chapter-rail button span{font-size:11px}
+.chapter-rail button b{font-size:14px}
+.eyebrow{font-size:11px}
+.chapter-body{font-size:16px;line-height:1.8}
+.design-law span{font-size:10px}
+.design-law b{font-size:16px;line-height:1.55}
+.reading-map>span{font-size:11px}
+.reading-map i{font-size:10px}
+.reading-map b{font-size:13px;line-height:1.35}
+.stage-tabs b{font-size:14px}
+.stage-tabs span{font-size:11px}
+.big-question span,.graph-copy>span,.state-head span{font-size:11px}
+.cause-cards i{font-size:11px}
+.cause-cards b{font-size:18px}
+.cause-cards p{font-size:15px;line-height:1.65}
+.continue-cta{font-size:14px;padding:13px 18px}
+.graph-copy p{font-size:15px;line-height:1.7}
+.focus-node{width:184px;min-height:88px;padding:12px 14px}
+.focus-node span{font-size:9px}
+.focus-node b{font-size:15px;line-height:1.25}
+.focus-node small{font-size:12px;line-height:1.45}
+.graph-bottom{font-size:12px}
+.control-deck>p{font-size:15px;line-height:1.65}
+.action-list b{font-size:15px}
+.action-list span{font-size:12px;line-height:1.55}
+.system-message{font-size:13px;line-height:1.65}
+.reset{font-size:11px}
+.state-head b{font-size:17px}
+.stat-card span{font-size:12px}
+.stat-card small{font-size:12px}
+.state-note{font-size:13px;line-height:1.65}
+.game-top{font-size:12px}
+.game-top b{font-size:10px}
+.poi span{font-size:11px}
+.avatar i{font-size:12px}
+.avatar span{font-size:11px}
+.game-objective span{font-size:9px}
+.game-objective b{font-size:14px}
+.game-feed p{font-size:12px;line-height:1.5}
+.game-explain p,.game-explain li{font-size:14px;line-height:1.75}
+.result-copy p{font-size:15px;line-height:1.65}
+.trace-node{min-width:150px;max-width:190px}
+.trace-node span{font-size:10px}
+.trace-node b{font-size:13px;line-height:1.45}
+.result-grid span{font-size:10px}
+.result-grid p{font-size:13px;line-height:1.65}
+.result-actions button,.graph-bottom button,.chapter-nav button{font-size:13px}
+.spec-strip span{font-size:10px}
+.spec-strip p{font-size:13px;line-height:1.65}
+.chapter-nav>span{font-size:11px}
+.inspector>span{font-size:10px}
+.inspector>p{font-size:13px;line-height:1.6}
+.inspector-law b,.inspector h3{font-size:10px}
+.inspector-law p,.inspector li{font-size:13px;line-height:1.65}
+@media(max-width:640px){
+  .chapter-rail button b{font-size:13px}
+  .stage-tabs b{font-size:13px}
+  .focus-node{width:142px;min-height:76px;padding:9px 10px}
+  .focus-node b{font-size:13px}
+  .focus-node small{display:none}
+  .game-feed p{font-size:12px}
+}
