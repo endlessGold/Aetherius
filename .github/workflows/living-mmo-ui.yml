@@ -1,0 +1,25 @@
+name: Living MMO UI Check
+
+on:
+  pull_request:
+    paths:
+      - 'public/living-mmo/**'
+      - '.github/workflows/living-mmo-ui.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'public/living-mmo/**'
+      - '.github/workflows/living-mmo-ui.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check interactive design document modules
+        run: |
+          node --check public/living-mmo/app.js
+          node --check public/living-mmo/model.js
