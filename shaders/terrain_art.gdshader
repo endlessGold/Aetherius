@@ -14,6 +14,7 @@ uniform float slope_blend : hint_range(0.01,0.5) = 0.18;
 uniform float shadow_steps : hint_range(2.0,8.0) = 4.0;
 uniform float rim_strength : hint_range(0.0,1.0) = 0.12;
 uniform float painted_grain : hint_range(0.0,0.15) = 0.025;
+uniform float secondary_shadow : hint_range(0.0,0.5) = 0.18;
 
 varying vec3 world_pos;
 
@@ -45,7 +46,9 @@ void fragment() {
 void light() {
 	float ndl=max(dot(NORMAL,LIGHT),0.0);
 	float band=floor(ndl*shadow_steps)/max(shadow_steps-1.0,1.0);
-	vec3 toon=mix(shadow_tint.rgb,vec3(1.0),band);
+	float deep=smoothstep(0.0,secondary_shadow,ndl);
+	vec3 deep_shadow=mix(shadow_tint.rgb*0.72,shadow_tint.rgb,deep);
+	vec3 toon=mix(deep_shadow,vec3(1.0),band);
 	float rim=pow(1.0-max(dot(NORMAL,VIEW),0.0),3.0)*rim_strength;
 	DIFFUSE_LIGHT += ALBEDO*LIGHT_COLOR*toon*ATTENUATION + rim_color.rgb*rim;
 }
