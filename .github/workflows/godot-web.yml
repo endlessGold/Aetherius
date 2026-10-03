@@ -1,11 +1,14 @@
 name: Godot Web
+
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   web:
     runs-on: ubuntu-24.04
@@ -15,6 +18,10 @@ jobs:
       TEMPLATE_DIR: /home/runner/.local/share/godot/export_templates/4.7.2.stable
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate Game IR JSON
+        run: python3 -m json.tool ums/map_definition.json > /dev/null
+
       - name: Install Godot and Web export templates
         shell: bash
         run: |
@@ -27,8 +34,10 @@ jobs:
           curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
           unzip -q /tmp/templates.tpz -d /tmp/templates
           cp -a /tmp/templates/templates/. "$TEMPLATE_DIR/"
+
       - name: Import project
         run: '"$GODOT_BIN" --headless --editor --path "$GITHUB_WORKSPACE" --quit-after 2'
+
       - name: Export Web build
         shell: bash
         run: |
@@ -37,12 +46,14 @@ jobs:
           "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE" --export-release "Web" build/web/index.html
           test -s build/web/index.html
           test -s build/web/index.wasm
+
       - name: Smoke-check exported files
         shell: bash
         run: |
           set -euo pipefail
           find build/web -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
           grep -q "<canvas" build/web/index.html
+
       - name: Upload Web artifact
         uses: actions/upload-artifact@v4
         with:
@@ -50,3 +61,33 @@ jobs:
           path: build/web/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Detect Vercel deployment credentials
+        id: vercel
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        shell: bash
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Vercel deployment skipped: configure VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID repository secrets."
+          fi
+
+      - name: Deploy verified Web build to Vercel
+        if: steps.vercel.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global vercel@latest
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          vercel deploy build/web --prod --yes --token="$VERCEL_TOKEN"
