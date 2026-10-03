@@ -1,7 +1,7 @@
 ; Engine configuration file.
 config_version=5
 [application]
-config/name="Aetherius UMS"
+config/name="Aetherius Terrain Showcase"
 run/main_scene="res://scenes/main.tscn"
 [display]
 window/size/viewport_width=1280
