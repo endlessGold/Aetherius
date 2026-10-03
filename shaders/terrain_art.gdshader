@@ -7,6 +7,12 @@ uniform vec4 high_color : source_color = vec4(0.72,0.69,0.46,1.0);
 uniform vec4 rock_color : source_color = vec4(0.32,0.34,0.31,1.0);
 uniform vec4 shadow_tint : source_color = vec4(0.34,0.43,0.48,1.0);
 uniform vec4 rim_color : source_color = vec4(0.72,0.86,0.88,1.0);
+uniform vec4 light_tint : source_color = vec4(1.0,0.94,0.78,1.0);
+uniform vec4 distance_tint : source_color = vec4(0.62,0.77,0.81,1.0);
+uniform vec3 value_masses = vec3(0.22,0.50,0.78);
+uniform float micro_detail_weight : hint_range(0.0,1.0) = 0.12;
+uniform float shadow_soft_design : hint_range(0.0,1.0) = 0.45;
+uniform float secondary_shadow : hint_range(0.0,0.5) = 0.18;
 uniform float macro_scale : hint_range(0.01,1.0) = 0.11;
 uniform float macro_strength : hint_range(0.0,0.5) = 0.12;
 uniform float slope_start : hint_range(0.0,1.0) = 0.55;
@@ -38,14 +44,17 @@ void fragment() {
 	float rock = smoothstep(slope_start, slope_start+slope_blend, slope);
 	terrain = mix(terrain, rock_color.rgb, rock);
 	float macro = (value_noise(world_pos.xz*macro_scale)-0.5)*macro_strength;
-	float grain = (hash21(floor(world_pos.xz*7.0))-0.5)*painted_grain;
+	float grain = (hash21(floor(world_pos.xz*7.0))-0.5)*painted_grain*micro_detail_weight;
 	ALBEDO = clamp(terrain + macro + grain,0.0,1.0);
 	ROUGHNESS = 1.0;
 }
 void light() {
 	float ndl=max(dot(NORMAL,LIGHT),0.0);
 	float band=floor(ndl*shadow_steps)/max(shadow_steps-1.0,1.0);
-	vec3 toon=mix(shadow_tint.rgb,vec3(1.0),band);
+	float deep=smoothstep(0.0,max(secondary_shadow,0.001),ndl);
+	vec3 shadow_mass=mix(shadow_tint.rgb*0.72,shadow_tint.rgb,deep);
+	float designed=mix(band,smoothstep(0.15,0.85,ndl),shadow_soft_design);
+	vec3 toon=mix(shadow_mass,light_tint.rgb,designed);
 	float rim=pow(1.0-max(dot(NORMAL,VIEW),0.0),3.0)*rim_strength;
 	DIFFUSE_LIGHT += ALBEDO*LIGHT_COLOR*toon*ATTENUATION + rim_color.rgb*rim;
 }
