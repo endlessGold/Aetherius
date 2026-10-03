@@ -1,6 +1,10 @@
 extends Node3D
 
 const TERRAIN_SHADER = preload("res://shaders/terrain_art.gdshader")
+const ART_BLUEPRINT_PATH = "res://art/blueprints/artistic_pbr_v2.json"
+
+var art_blueprint: ArtisticBlueprint
+var art_pipeline := ArtisticRenderPipeline.new()
 
 var terrain: MeshInstance3D
 var terrain_material: ShaderMaterial
@@ -18,6 +22,8 @@ var terrace_strength := 0.12
 var scatter_root: Node3D
 
 func _ready() -> void:
+	art_blueprint = ArtisticBlueprint.new()
+	art_blueprint.load_from_path(ART_BLUEPRINT_PATH)
 	_build_environment()
 	_build_terrain()
 	_build_scatter()
@@ -75,6 +81,7 @@ func _build_terrain() -> void:
 	st.generate_normals(); terrain.mesh=st.commit()
 	terrain_material=ShaderMaterial.new(); terrain_material.shader=TERRAIN_SHADER
 	terrain.material_override=terrain_material
+	if art_blueprint: art_pipeline.apply_terrain(terrain_material, art_blueprint)
 
 func _build_environment() -> void:
 	sun=DirectionalLight3D.new(); sun.rotation_degrees=Vector3(-52,-38,0); sun.light_energy=1.0; sun.shadow_enabled=true; add_child(sun)
@@ -84,6 +91,7 @@ func _build_environment() -> void:
 	environment.ambient_light_color=Color("#b9c6b1"); environment.ambient_light_energy=0.72
 	environment.tonemap_mode=Environment.TONE_MAPPER_FILMIC
 	we.environment=environment; add_child(we)
+	if art_blueprint: art_pipeline.apply_environment(sun, environment, art_blueprint)
 
 func _build_camera() -> void:
 	camera=Camera3D.new(); camera.projection=Camera3D.PROJECTION_ORTHOGONAL; camera.size=27.0

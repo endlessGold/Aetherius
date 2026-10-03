@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "id": "artistic_pbr_v2",
+  "reference": {
+    "policy": "observe_then_interpret",
+    "preserve_physical_channels": true
+  },
+  "semantics": {
+    "classes": ["terrain","foliage","structure","water","character","prop","sky","fx"]
+  },
+  "color_script": {
+    "shadow_hue_bias": "#536b78",
+    "light_hue_bias": "#fff0c7",
+    "distance_hue_bias": "#9fc4cf",
+    "value_masses": [0.22,0.50,0.78],
+    "distance_desaturation": 0.22
+  },
+  "interpretation": {
+    "normal": {"macro":1.0,"medium":0.55,"micro":0.12},
+    "ao": {"darken":0.18,"color_shift":0.35},
+    "roughness": {"physical_weight":0.45,"art_weight":0.55},
+    "shadow": {"simplify":0.45,"secondary":0.18},
+    "detail": {"foreground":1.0,"midground":0.62,"background":0.25}
+  },
+  "brush_field": {
+    "space": "world",
+    "direction_source": "surface_semantic",
+    "scale": 1.8,
+    "irregularity": 0.22,
+    "temporal_lock": true
+  },
+  "lighting": {
+    "physical_weight": 0.65,
+    "artistic_weight": 0.35,
+    "allow_semantic_light_bias": true,
+    "rim_strength": 0.14,
+    "backlight_strength": 0.18
+  },
+  "composition": {
+    "focal_importance_weight": 0.7,
+    "depth_reduction_weight": 0.65,
+    "allow_perspective_warp": true
+  },
+  "diagnostics": ["physical","interpreted","final"]
+}
