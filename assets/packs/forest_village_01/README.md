@@ -1,10 +1,9 @@
 # Forest Village 01
 
-A source-controlled Aetherius resource pack. Every asset is an individual repository file rather than a sprite-sheet mockup.
+This pack is reconstructed from the approved Aetherius resource-pack sheet. Placeholder SVG/OBJ assets were removed.
 
-- `terrain/*.svg`: tileable source textures for terrain semantics.
-- `foliage/*.obj`, `rocks/*.obj`, `props/*.obj`: lightweight source meshes.
-- `decals/*.svg`: transparent detail decals.
-- `manifest.json`: canonical family/variant registry.
+Run:
 
-SVG and OBJ are used as Git-native source formats so assets remain reviewable in GitHub. Godot imports them; optimized PNG/WebP/GLB derivatives belong in the build/import pipeline.
+`python tools/extract_resource_pack.py path/to/source_sheet.png`
+
+The extractor produces 9 panel references, 24 material-channel crops, 31 object reference crops, and provenance JSON. These are reference/source pixels, not invented replacements. Buildings/cliffs/rocks/props remain incomplete until image-to-3D or multi-view reconstruction produces validated GLB assets.

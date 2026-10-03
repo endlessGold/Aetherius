@@ -1,36 +1,56 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "forest-village-01",
-  "style": "aetherius-artistic-pbr-v2",
+  "status": "reference-decomposition",
+  "source": {
+    "kind": "approved_generated_resource_pack_sheet",
+    "width": 1536,
+    "height": 1024,
+    "note": "Committed raster crops must be pixel-derived from the approved sheet; placeholders are forbidden."
+  },
+  "policy": {
+    "placeholder_assets": false,
+    "generated_svg_substitutes": false,
+    "complete_requires_binary_asset": true
+  },
   "families": {
-    "terrain": [
+    "materials": [
       "grass",
       "soil",
-      "path",
+      "rock",
       "cliff",
-      "water-edge"
+      "path",
+      "water"
     ],
-    "foliage": [
-      "tree-pine-a",
-      "tree-broadleaf-a",
-      "shrub-a"
+    "reference_panels": [
+      "terrain_tiles",
+      "terrain_variants",
+      "foliage",
+      "rocks_cliffs",
+      "buildings",
+      "props",
+      "decals",
+      "water",
+      "lod_variants"
     ],
-    "rocks": [
-      "rock-cluster-a",
-      "cliff-pillar-a"
+    "reconstruction_3d": [
+      "terrain_modules",
+      "rocks_cliffs",
+      "buildings",
+      "props"
     ],
-    "props": [
-      "crate-a",
-      "barrel-a"
-    ],
-    "decals": [
-      "grass-patch-a",
-      "flower-patch-a"
+    "direct_2d": [
+      "materials",
+      "foliage",
+      "decals",
+      "water"
     ]
   },
-  "formats": {
-    "textures": "svg",
-    "meshes": "obj"
-  },
-  "notes": "Text-native source assets are intentionally Git-visible and Godot-importable; binary derivatives are build artifacts."
+  "material_channels": [
+    "albedo",
+    "normal",
+    "roughness",
+    "height_ao"
+  ],
+  "next_stage": "binary-ingestion"
 }
