@@ -11,9 +11,11 @@ var sun:DirectionalLight3D
 var artistic_mode:=true
 var seed_value:=1337
 var mode_label:Label
+var material_resources:Dictionary
 
 func _ready()->void:
 	generator.seed=seed_value
+	material_resources=MaterialResourceGenerator.new().generate_all()
 	_build_environment()
 	_build_showcase()
 	_build_camera()
@@ -43,7 +45,15 @@ func _build_showcase()->void:
 	if terrain: terrain.queue_free()
 	if nature: nature.queue_free()
 	terrain=MeshInstance3D.new(); terrain.name="RTSTerrainShowcase"; terrain.mesh=generator.build_mesh(); add_child(terrain)
-	terrain_material=ShaderMaterial.new(); terrain_material.shader=TERRAIN_SHADER; terrain_material.set_shader_parameter("artistic_mode",1.0 if artistic_mode else 0.0); terrain.material_override=terrain_material
+	terrain_material=ShaderMaterial.new(); terrain_material.shader=TERRAIN_SHADER; terrain_material.set_shader_parameter("artistic_mode",1.0 if artistic_mode else 0.0)
+	terrain_material.set_shader_parameter("grass_albedo",material_resources["grass"]["albedo"])
+	terrain_material.set_shader_parameter("grass_normal",material_resources["grass"]["normal"])
+	terrain_material.set_shader_parameter("soil_albedo",material_resources["soil"]["albedo"])
+	terrain_material.set_shader_parameter("rock_albedo",material_resources["rock"]["albedo"])
+	terrain_material.set_shader_parameter("cliff_albedo",material_resources["cliff"]["albedo"])
+	terrain_material.set_shader_parameter("path_albedo",material_resources["path"]["albedo"])
+	terrain_material.set_shader_parameter("roughness_map",material_resources["grass"]["roughness"])
+	terrain.material_override=terrain_material
 	nature=Node3D.new(); nature.name="SemanticDressing"; add_child(nature); scatter.populate(nature,generator,seed_value)
 	_build_water()
 
