@@ -9,8 +9,8 @@ window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 [rendering]
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="forward_plus"
 environment/defaults/default_clear_color=Color(0.035,0.055,0.075,1)
 [input]
 move_left={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":65),Object(InputEventKey,"physical_keycode":4194311)]}
