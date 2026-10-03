@@ -12,7 +12,7 @@ var artistic_mode:=true
 var seed_value:=1337
 var mode_label:Label
 var material_resources:Dictionary
-var anime_compositor:AnimeRenderCompositor
+var perceptual_effect:PerceptualCompositorEffect
 
 func _ready()->void:
 	generator.seed=seed_value
@@ -21,8 +21,7 @@ func _ready()->void:
 	_build_showcase()
 	_build_camera()
 	_build_ui()
-	anime_compositor=AnimeRenderCompositor.new(); add_child(anime_compositor); anime_compositor.install(self)
-	anime_compositor.configure_occlusion(1.35,0.32,0.72)
+
 
 func _process(delta:float)->void:
 	if Input.is_action_pressed("zoom_in"): camera.size=max(16.0,camera.size-delta*14.0)
@@ -34,7 +33,7 @@ func _unhandled_key_input(event:InputEvent)->void:
 		artistic_mode=!artistic_mode
 		terrain_material.set_shader_parameter("artistic_mode",1.0 if artistic_mode else 0.0)
 		mode_label.text="FINAL / ARTISTIC PBR + ANIME PASSES" if artistic_mode else "PHYSICAL BASELINE"
-		anime_compositor.set_enabled(artistic_mode)
+		if perceptual_effect: perceptual_effect.enabled=artistic_mode
 	elif event.keycode==KEY_R:
 		seed_value+=7919; generator.seed=seed_value; _build_showcase()
 
@@ -43,7 +42,9 @@ func _build_environment()->void:
 	var world=WorldEnvironment.new(); var env=Environment.new()
 	env.background_mode=Environment.BG_COLOR; env.background_color=Color("#a9cbd5")
 	env.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color=Color("#afc7b7"); env.ambient_light_energy=.72
-	env.tonemap_mode=Environment.TONE_MAPPER_FILMIC; world.environment=env; add_child(world)
+	env.tonemap_mode=Environment.TONE_MAPPER_FILMIC; world.environment=env
+	var compositor:=Compositor.new(); perceptual_effect=PerceptualCompositorEffect.new(); compositor.compositor_effects=[perceptual_effect]; world.compositor=compositor
+	add_child(world)
 
 func _build_showcase()->void:
 	if terrain: terrain.queue_free()
