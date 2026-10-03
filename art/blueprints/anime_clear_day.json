@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "anime_clear_day",
+  "art_style": {
+    "shadow_tint": "#536b78",
+    "shadow_steps": 3,
+    "secondary_shadow": 0.18,
+    "rim_color": "#d8f0ee",
+    "rim_strength": 0.16,
+    "painted_variation": 0.035,
+    "macro_variation": 0.14,
+    "distance_desaturation": 0.22
+  },
+  "materials": {
+    "terrain": {
+      "low_color": "#365d36",
+      "mid_color": "#76964c",
+      "high_color": "#c1b77d",
+      "rock_color": "#626a66",
+      "slope_start": 0.52,
+      "slope_blend": 0.16
+    },
+    "foliage": {
+      "base_color": "#587f45",
+      "sunlit_color": "#8eae5c",
+      "backlight": 0.28,
+      "wind_strength": 0.18
+    },
+    "water": {
+      "shallow_color": "#76d2d0",
+      "deep_color": "#397f9d",
+      "foam": 0.35,
+      "flow": 0.25
+    }
+  },
+  "environment": {
+    "sky_color": "#b9d9e3",
+    "ambient_color": "#b9cdb8",
+    "ambient_energy": 0.72,
+    "sun_color": "#fff0c7",
+    "sun_energy": 1.0,
+    "sun_rotation": [-52.0, -38.0, 0.0],
+    "atmosphere_depth": 0.28
+  },
+  "composition": {
+    "camera_projection": "orthographic",
+    "camera_size": 27.0,
+    "foreground_detail": 1.0,
+    "midground_detail": 0.65,
+    "background_detail": 0.25
+  },
+  "world_art": {
+    "terrain_seed": 1337,
+    "height": 5.2,
+    "frequency": 0.075,
+    "ridge": 0.38,
+    "terrace": 0.12,
+    "tree_count": 34
+  }
+}
