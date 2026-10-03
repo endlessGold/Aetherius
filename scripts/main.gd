@@ -12,6 +12,7 @@ var artistic_mode:=true
 var seed_value:=1337
 var mode_label:Label
 var material_resources:Dictionary
+var anime_compositor:AnimeRenderCompositor
 
 func _ready()->void:
 	generator.seed=seed_value
@@ -20,6 +21,8 @@ func _ready()->void:
 	_build_showcase()
 	_build_camera()
 	_build_ui()
+	anime_compositor=AnimeRenderCompositor.new(); add_child(anime_compositor); anime_compositor.install(self)
+	anime_compositor.configure_occlusion(1.35,0.32,0.72)
 
 func _process(delta:float)->void:
 	if Input.is_action_pressed("zoom_in"): camera.size=max(16.0,camera.size-delta*14.0)
@@ -30,7 +33,8 @@ func _unhandled_key_input(event:InputEvent)->void:
 	if event.keycode==KEY_SPACE:
 		artistic_mode=!artistic_mode
 		terrain_material.set_shader_parameter("artistic_mode",1.0 if artistic_mode else 0.0)
-		mode_label.text="FINAL / ARTISTIC PBR" if artistic_mode else "PHYSICAL BASELINE"
+		mode_label.text="FINAL / ARTISTIC PBR + ANIME PASSES" if artistic_mode else "PHYSICAL BASELINE"
+		anime_compositor.set_enabled(artistic_mode)
 	elif event.keycode==KEY_R:
 		seed_value+=7919; generator.seed=seed_value; _build_showcase()
 
@@ -76,7 +80,7 @@ func _build_ui()->void:
 	var top=PanelContainer.new(); top.position=Vector2(18,18); top.size=Vector2(520,92); top.add_theme_stylebox_override("panel",_panel()); root.add_child(top)
 	var v=VBoxContainer.new(); top.add_child(v)
 	var title=Label.new(); title.text="AETHERIUS  /  RTS TERRAIN SHOWCASE"; title.add_theme_font_size_override("font_size",20); v.add_child(title)
-	mode_label=Label.new(); mode_label.text="FINAL / ARTISTIC PBR"; mode_label.modulate=Color("#7bdcff"); v.add_child(mode_label)
+	mode_label=Label.new(); mode_label.text="FINAL / ARTISTIC PBR + ANIME PASSES"; mode_label.modulate=Color("#7bdcff"); v.add_child(mode_label)
 	var hint=Label.new(); hint.text="SPACE compare physical/final   •   R regenerate   •   Q/E zoom"; hint.modulate=Color("#a9b6c2"); v.add_child(hint)
 	var badge=PanelContainer.new(); badge.position=Vector2(18,126); badge.size=Vector2(235,105); badge.add_theme_stylebox_override("panel",_panel()); root.add_child(badge)
 	var info=Label.new(); info.text="TERRAIN GRAMMAR\n• upper plateau + cliff\n• authored ramp + path\n• basin + semantic clusters"; badge.add_child(info)
