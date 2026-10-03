@@ -19,8 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate Game IR JSON
-        run: python3 -m json.tool ums/map_definition.json > /dev/null
+      - name: Validate Artistic PBR Blueprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool art/blueprints/artistic_pbr_v2.json > /dev/null
+          python3 -c 'import json; d=json.load(open("art/blueprints/artistic_pbr_v2.json")); assert d.get("schema_version")==2; required={"reference","semantics","color_script","interpretation","brush_field","lighting","composition"}; missing=required-d.keys(); assert not missing, f"missing blueprint sections: {sorted(missing)}"'
 
       - name: Install Godot and Web export templates
         shell: bash
