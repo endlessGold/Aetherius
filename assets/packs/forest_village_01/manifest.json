@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "forest-village-01",
+  "style": "aetherius-artistic-pbr-v2",
+  "families": {
+    "terrain": [
+      "grass",
+      "soil",
+      "path",
+      "cliff",
+      "water-edge"
+    ],
+    "foliage": [
+      "tree-pine-a",
+      "tree-broadleaf-a",
+      "shrub-a"
+    ],
+    "rocks": [
+      "rock-cluster-a",
+      "cliff-pillar-a"
+    ],
+    "props": [
+      "crate-a",
+      "barrel-a"
+    ],
+    "decals": [
+      "grass-patch-a",
+      "flower-patch-a"
+    ]
+  },
+  "formats": {
+    "textures": "svg",
+    "meshes": "obj"
+  },
+  "notes": "Text-native source assets are intentionally Git-visible and Godot-importable; binary derivatives are build artifacts."
+}
