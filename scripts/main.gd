@@ -101,34 +101,73 @@ func _build_scatter() -> void:
 		crown.mesh=cm; crown.position=Vector3(x,y+1.7,z); var mat=StandardMaterial3D.new(); mat.albedo_color=Color("#587c46"); mat.roughness=1.0
 		crown.material_override=mat; scatter_root.add_child(crown)
 
+func _make_panel_style(color: Color, border: Color) -> StyleBoxFlat:
+	var style=StyleBoxFlat.new()
+	style.bg_color=color
+	style.border_color=border
+	style.set_border_width_all(1)
+	style.corner_radius_top_left=6; style.corner_radius_top_right=6
+	style.corner_radius_bottom_left=6; style.corner_radius_bottom_right=6
+	style.content_margin_left=12; style.content_margin_right=12
+	style.content_margin_top=10; style.content_margin_bottom=10
+	return style
+
 func _slider(parent: VBoxContainer,label_text:String,min_v:float,max_v:float,value:float,step:float,callback:Callable) -> void:
+	var label=Label.new(); label.text=label_text; label.modulate=Color("#b7c6d6"); parent.add_child(label)
 	var row=HBoxContainer.new(); parent.add_child(row)
-	var label=Label.new(); label.text=label_text; label.custom_minimum_size.x=145; row.add_child(label)
-	var slider=HSlider.new(); slider.min_value=min_v; slider.max_value=max_v; slider.value=value; slider.step=step; slider.custom_minimum_size.x=210; row.add_child(slider)
-	var value_label=Label.new(); value_label.text=str(value); value_label.custom_minimum_size.x=55; row.add_child(value_label)
+	var slider=HSlider.new(); slider.min_value=min_v; slider.max_value=max_v; slider.value=value; slider.step=step; slider.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(slider)
+	var value_label=Label.new(); value_label.text="%.2f"%value; value_label.custom_minimum_size.x=48; row.add_child(value_label)
 	slider.value_changed.connect(func(v): value_label.text="%.2f"%v; callback.call(v))
+
+func _section(parent: VBoxContainer, text: String) -> void:
+	var label=Label.new(); label.text=text.to_upper(); label.modulate=Color("#6fd6ff"); label.add_theme_font_size_override("font_size",12); parent.add_child(label)
+	var line=HSeparator.new(); parent.add_child(line)
 
 func _build_editor() -> void:
 	var layer=CanvasLayer.new(); add_child(layer)
-	var panel=PanelContainer.new(); panel.position=Vector2(18,18); panel.custom_minimum_size=Vector2(460,0); layer.add_child(panel)
-	var box=VBoxContainer.new(); box.add_theme_constant_override("separation",8); panel.add_child(box)
-	var title=Label.new(); title.text="AETHERIUS // TERRAIN ART LAB"; title.add_theme_font_size_override("font_size",22); box.add_child(title)
-	var sub=Label.new(); sub.text="Terrain → Material → Nature → Lighting\nQ/E zoom · live procedural preview"; box.add_child(sub)
-	_slider(box,"Terrain Height",0.5,10.0,height_scale,0.1,func(v): height_scale=v; _rebuild_geometry())
-	_slider(box,"Landform Scale",0.025,0.18,frequency,0.005,func(v): frequency=v; _rebuild_geometry())
-	_slider(box,"Ridge",0.0,1.0,ridge_strength,0.01,func(v): ridge_strength=v; _rebuild_geometry())
-	_slider(box,"Terracing",0.0,0.85,terrace_strength,0.01,func(v): terrace_strength=v; _rebuild_geometry())
-	_slider(box,"Macro Variation",0.0,0.4,0.12,0.01,func(v): terrain_material.set_shader_parameter("macro_strength",v))
-	_slider(box,"Rock Slope",0.1,0.9,0.55,0.01,func(v): terrain_material.set_shader_parameter("slope_start",v))
-	_slider(box,"Shadow Bands",2.0,7.0,4.0,1.0,func(v): terrain_material.set_shader_parameter("shadow_steps",v))
-	_slider(box,"Sun Energy",0.15,2.0,1.0,0.05,func(v): sun.light_energy=v)
-	_slider(box,"Atmosphere",0.1,1.5,0.72,0.02,func(v): environment.ambient_light_energy=v)
-	var buttons=HBoxContainer.new(); box.add_child(buttons)
-	var randomize=Button.new(); randomize.text="Randomize Terrain"; buttons.add_child(randomize)
-	randomize.pressed.connect(func(): seed_value=randi(); _rebuild_geometry())
-	var nature=Button.new(); nature.text="Regenerate Nature"; buttons.add_child(nature)
-	nature.pressed.connect(_build_scatter)
-	var note=Label.new(); note.text="v0: geometry + slope blend + macro variation + foliage scatter + lighting"; box.add_child(note)
+	var root=Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); layer.add_child(root)
+
+	var top=PanelContainer.new(); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.offset_bottom=54; top.add_theme_stylebox_override("panel",_make_panel_style(Color("#101822ee"),Color("#26384a"))); root.add_child(top)
+	var top_row=HBoxContainer.new(); top_row.add_theme_constant_override("separation",14); top.add_child(top_row)
+	var brand=Label.new(); brand.text="AETHERIUS  /  ARTWORK STUDIO"; brand.add_theme_font_size_override("font_size",19); brand.custom_minimum_size.x=300; top_row.add_child(brand)
+	for name in ["TERRAIN","MATERIAL","FOLIAGE","WATER / FX","LIGHTING"]:
+		var tab=Button.new(); tab.text=name; tab.flat=true; top_row.add_child(tab)
+	var spacer=Control.new(); spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL; top_row.add_child(spacer)
+	var seed_label=Label.new(); seed_label.text="SEED  "+str(seed_value); top_row.add_child(seed_label)
+	var randomize=Button.new(); randomize.text="RANDOMIZE"; top_row.add_child(randomize)
+	randomize.pressed.connect(func(): seed_value=randi(); seed_label.text="SEED  "+str(seed_value); _rebuild_geometry())
+
+	var left=PanelContainer.new(); left.position=Vector2(14,68); left.size=Vector2(230,540); left.add_theme_stylebox_override("panel",_make_panel_style(Color("#101822e8"),Color("#26384a"))); root.add_child(left)
+	var layers=VBoxContainer.new(); layers.add_theme_constant_override("separation",7); left.add_child(layers)
+	var lt=Label.new(); lt.text="SCENE LAYERS"; lt.add_theme_font_size_override("font_size",16); layers.add_child(lt)
+	for item in ["▾ ENVIRONMENT","   Terrain Surface","   Rock / Cliff Blend","▾ NATURE","   Trees / Canopy","   Ground Foliage","▾ ATMOSPHERE","   Sun & Shadow","   Ambient / Haze"]:
+		var b=Button.new(); b.text=item; b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.flat=true; layers.add_child(b)
+	var add=Button.new(); add.text="+ ADD LAYER"; layers.add_child(add)
+
+	var right=PanelContainer.new(); right.set_anchors_preset(Control.PRESET_RIGHT_WIDE); right.offset_left=-330; right.offset_top=68; right.offset_right=-14; right.offset_bottom=-18; right.add_theme_stylebox_override("panel",_make_panel_style(Color("#101822ee"),Color("#26384a"))); root.add_child(right)
+	var inspector=VBoxContainer.new(); inspector.add_theme_constant_override("separation",6); right.add_child(inspector)
+	var it=Label.new(); it.text="TERRAIN INSPECTOR"; it.add_theme_font_size_override("font_size",17); inspector.add_child(it)
+	var hint=Label.new(); hint.text="Procedural landform / live preview"; hint.modulate=Color("#8192a3"); inspector.add_child(hint)
+	_section(inspector,"Geometry")
+	_slider(inspector,"Height",0.5,10.0,height_scale,0.1,func(v): height_scale=v; _rebuild_geometry())
+	_slider(inspector,"Landform Scale",0.025,0.18,frequency,0.005,func(v): frequency=v; _rebuild_geometry())
+	_slider(inspector,"Ridge",0.0,1.0,ridge_strength,0.01,func(v): ridge_strength=v; _rebuild_geometry())
+	_slider(inspector,"Terracing",0.0,0.85,terrace_strength,0.01,func(v): terrace_strength=v; _rebuild_geometry())
+	_section(inspector,"Material Layers")
+	_slider(inspector,"Macro Variation",0.0,0.4,0.12,0.01,func(v): terrain_material.set_shader_parameter("macro_strength",v))
+	_slider(inspector,"Rock Slope",0.1,0.9,0.55,0.01,func(v): terrain_material.set_shader_parameter("slope_start",v))
+	_slider(inspector,"Shadow Bands",2.0,7.0,4.0,1.0,func(v): terrain_material.set_shader_parameter("shadow_steps",v))
+	_section(inspector,"Lighting")
+	_slider(inspector,"Sun Energy",0.15,2.0,1.0,0.05,func(v): sun.light_energy=v)
+	_slider(inspector,"Atmosphere",0.1,1.5,0.72,0.02,func(v): environment.ambient_light_energy=v)
+	var regen=Button.new(); regen.text="REGENERATE NATURE"; inspector.add_child(regen); regen.pressed.connect(_build_scatter)
+
+	var bottom=PanelContainer.new(); bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE); bottom.offset_left=258; bottom.offset_right=-344; bottom.offset_top=-54; bottom.offset_bottom=-14; bottom.add_theme_stylebox_override("panel",_make_panel_style(Color("#101822dd"),Color("#26384a"))); root.add_child(bottom)
+	var status=HBoxContainer.new(); bottom.add_child(status)
+	var s=Label.new(); s.text="LIVE PREVIEW   •   72×72 TERRAIN   •   Q/E ZOOM"; status.add_child(s)
+	var fill=Control.new(); fill.size_flags_horizontal=Control.SIZE_EXPAND_FILL; status.add_child(fill)
+	var save=Button.new(); save.text="SAVE PRESET"; status.add_child(save)
+	var bake=Button.new(); bake.text="BAKE / EXPORT"; status.add_child(bake)
 
 func _rebuild_geometry() -> void:
 	_build_terrain()
