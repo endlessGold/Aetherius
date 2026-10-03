@@ -1,1 +1,28 @@
-{"id":"ancient_gate_demo","version":1,"intent":"Playable Web vertical slice","triggers":[{"id":"open_ancient_gate","when":{"event":"entity_entered","area":"ancient_gate"},"if":{"enemy_count":{"group":"gate_guardians","equals":0}},"do":[{"open_gate":"ancient_gate"},{"activate":"crystal"},{"set_world_state":{"gate_restored":true}}]}]}
+{
+  "id": "ancient_gate_demo",
+  "version": 2,
+  "intent": "Executable UMS vertical slice",
+  "groups": [{"id":"gate_guardians","kind":"enemy"}],
+  "triggers": [
+    {
+      "id": "open_ancient_gate",
+      "when": {"event":"entity_entered","area":"ancient_gate"},
+      "if": {"enemy_count":{"group":"gate_guardians","equals":0}},
+      "do": [
+        {"open_gate":"ancient_gate"},
+        {"activate":"crystal"},
+        {"set_world_state":{"gate_restored":true}}
+      ]
+    },
+    {
+      "id": "open_after_last_guardian",
+      "when": {"event":"enemy_count_changed","group":"gate_guardians"},
+      "if": {"enemy_count":{"group":"gate_guardians","equals":0}},
+      "do": [
+        {"open_gate":"ancient_gate"},
+        {"activate":"crystal"},
+        {"set_world_state":{"gate_restored":true}}
+      ]
+    }
+  ]
+}
