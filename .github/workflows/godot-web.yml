@@ -1,0 +1,52 @@
+name: Godot Web
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    env:
+      GODOT_VERSION: "4.7.2"
+      GODOT_BIN: /opt/godot/godot
+      TEMPLATE_DIR: /home/runner/.local/share/godot/export_templates/4.7.2.stable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and Web export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /opt/godot "$TEMPLATE_DIR"
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /opt/godot
+          mv "/opt/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$GODOT_BIN"
+          chmod +x "$GODOT_BIN"
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -a /tmp/templates/templates/. "$TEMPLATE_DIR/"
+      - name: Import project
+        run: '"$GODOT_BIN" --headless --editor --path "$GITHUB_WORKSPACE" --quit-after 2'
+      - name: Export Web build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE" --export-release "Web" build/web/index.html
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+      - name: Smoke-check exported files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find build/web -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
+          grep -q "<canvas" build/web/index.html
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aetherius-web
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 14
