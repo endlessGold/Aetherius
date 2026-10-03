@@ -21,6 +21,9 @@ func _ready() -> void:
 	add_child(runtime)
 	runtime.configure(self, "res://ums/map_definition.json")
 	runtime.runtime_log.connect(log_event)
+	runtime.get_entity_registry().register_entity("player", player, {"kind":"player"})
+	runtime.get_entity_registry().register_entity("ancient_gate", gate, {"kind":"interactable"})
+	runtime.get_entity_registry().register_entity("crystal", crystal, {"kind":"interactable"})
 	log_event("UMS runtime ready")
 	log_event("Find the gate and defeat its guardians")
 
@@ -91,7 +94,8 @@ func execute_ums_action(action:Dictionary) -> void:
 	if action.has("activate") and action["activate"]=="crystal":
 		crystal.material_override=illustration_material(Color("#c97cff"),Color("#b23cff"))
 	if action.has("set_world_state"):
-		for key in action["set_world_state"]: world_state[key]=action["set_world_state"][key]
+		for key in action["set_world_state"]:
+			world_state[key]=action["set_world_state"][key]
 
 func update_objective() -> void:
 	if not objective_label: return

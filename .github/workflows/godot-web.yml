@@ -38,6 +38,9 @@ jobs:
       - name: Import project
         run: '"$GODOT_BIN" --headless --editor --path "$GITHUB_WORKSPACE" --quit-after 2'
 
+      - name: Run UMS headless scenario
+        run: '"$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE" --script res://tests/ums_scenario.gd'
+
       - name: Export Web build
         shell: bash
         run: |
