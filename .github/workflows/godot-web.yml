@@ -64,7 +64,7 @@ jobs:
 
       - name: Detect Vercel deployment credentials
         id: vercel
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -88,6 +88,8 @@ jobs:
         run: |
           set -euo pipefail
           npm install --global vercel@latest
-          mkdir -p .vercel
+          cp vercel.json build/web/vercel.json
+          mkdir -p .vercel build/web/.vercel
           printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > build/web/.vercel/project.json
           vercel deploy build/web --prod --yes --token="$VERCEL_TOKEN"
