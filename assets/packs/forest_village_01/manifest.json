@@ -6,7 +6,15 @@
     "kind": "approved_generated_resource_pack_sheet",
     "width": 1536,
     "height": 1024,
-    "note": "Committed raster crops must be pixel-derived from the approved sheet; placeholders are forbidden."
+    "note": "Committed raster crops must be pixel-derived from the approved sheet; placeholders are forbidden.",
+    "sha256": "a16a2b700a0ac77f7f6386c69e30e25c695e473acf37c97c83bad40fed0a034a",
+    "local_extraction_verified": true,
+    "verified_crop_count": 33,
+    "verified_crop_groups": {
+      "panels": 9,
+      "material_channels": 24
+    },
+    "binary_ingestion_status": "blocked_by_connector_file_handoff"
   },
   "policy": {
     "placeholder_assets": false,
