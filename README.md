@@ -1,25 +1,24 @@
 # Aetherius
 
-Aetherius is an executable game-system platform built around a data-driven Godot UMS runtime.
+Aetherius is a Godot-based art and game systems research project. The active visual foundation is **Artistic Rendering Architecture v2**: references and physical/PBR data are preserved as observation inputs, then intentionally interpreted into authored color, material, lighting, brush, detail and composition decisions.
 
-## Current vertical slice
+## Active visual pipeline
 
-- Godot 4.x 3D world with orthographic 2.5D camera
-- executable Trigger -> Condition -> Action Game IR
-- runtime JSON loading and validation
-- illustration-oriented 2D-style shader applied to 3D presentation
-- ancient-gate encounter driven by UMS rules
-- GitHub Actions Godot Web build, smoke validation and artifact publishing
-- optional Vercel deployment of the verified Web artifact
+Reference -> Observation -> Physical Reconstruction -> Semantic Scene -> Artistic Interpretation -> Painterly Representation -> Designed Lighting -> Compositing -> Frame
 
-The old implementation remains preserved on `legacy/main-v1`.
+See `docs/artistic-rendering-architecture.md` for the canonical design and `art/blueprints/artistic_pbr_v2.json` for the executable blueprint.
 
-## Architecture
+## Current preview
 
-See `docs/ums-engine-architecture.md` for the structured UMS/Game IR architecture and `docs/web-build.md` for the Web/Vercel delivery pipeline.
+- procedural terrain and nature scatter
+- orthographic artwork workspace
+- PBR-to-artistic interpretation contract
+- color/value/shadow distortion controls
+- specialized terrain shader
+- Godot Web CI and optional verified Vercel deployment
 
 ## Local run
 
 Open the repository in Godot 4.x and run `scenes/main.tscn`.
 
-Controls: WASD/arrows move, Q zooms in, E zooms out.
+Controls: Q zooms in, E zooms out.
