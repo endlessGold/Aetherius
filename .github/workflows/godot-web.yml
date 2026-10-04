@@ -42,6 +42,9 @@ jobs:
       - name: Import project
         run: '"$GODOT_BIN" --headless --editor --path "$GITHUB_WORKSPACE" --quit-after 2'
 
+      - name: Validate perceptual renderer contract
+        run: '"$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE" --script res://tests/perceptual_render_contract_test.gd'
+
       - name: Export Web build
         shell: bash
         run: |
