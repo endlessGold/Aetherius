@@ -1,4 +1,5 @@
 name: Godot Web
+# showcase rebuild: 2026-10-04
 
 on:
   push:
