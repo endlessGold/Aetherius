@@ -33,7 +33,7 @@ func _palette(kind:String,h:float,uv:Vector2)->Color:
 		"rock": return Color("#4f5754").lerp(Color("#8b8e82"),h)
 		"cliff": return Color("#55585a").lerp(Color("#aaa58e"),h)
 		"path":
-			var edge=abs(fract(uv.x*4.0)-.5)*2.0
+			var edge=abs(_fract(uv.x*4.0)-.5)*2.0
 			return Color("#756143").lerp(Color("#b29a65"),clamp(h*.8+(1.0-edge)*.15,0,1))
 	return Color(h,h,h)
 
@@ -67,4 +67,7 @@ func _value(p:Vector2,seed:int)->float:
 	return lerp(lerp(_hash(i,seed),_hash(i+Vector2.RIGHT,seed),f.x),lerp(_hash(i+Vector2.DOWN,seed),_hash(i+Vector2.ONE,seed),f.x),f.y)
 
 func _hash(p:Vector2,seed:int)->float:
-	return fract(sin(p.dot(Vector2(127.1,311.7))+float(seed)*.013)*43758.5453)
+	return _fract(sin(p.dot(Vector2(127.1,311.7))+float(seed)*.013)*43758.5453)
+
+func _fract(value:float)->float:
+	return value-floor(value)
